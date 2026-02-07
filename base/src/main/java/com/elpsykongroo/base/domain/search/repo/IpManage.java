@@ -16,9 +16,9 @@
 
 package com.elpsykongroo.base.domain.search.repo;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import java.time.Instant;
 
 @Data

@@ -1,0 +1,31 @@
+server:
+  port: 10086
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 10s
+service:
+  vault: ${VAULT_ENABLE:true}
+logging:
+  level:
+    root: ${ROOT_LOG_LEVEL:info}
+    web: ${WEB_LOG_LEVEL:debug}
+    org:
+      springframework:
+        security: ${SECURITY_LOG_LEVEL:debug}
+    com:
+      elpsykongroo: ${APP_LOG_LEVEL:debug}
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+    prometheus:
+      enabled: true
+  endpoints:
+    web:
+      cors:
+        allowed-origins: "*"
+        allowed-headers: "*"
+        allowed-methods: OPTIONS, GET
+      exposure:
+        include: ${ENDPOINTS_WEB:health,prometheus}

@@ -1,0 +1,138 @@
+server:
+  http2:
+    enabled: true
+  #  netty:
+  #    connection-timeout: -1
+  tomcat:
+    connection-timeout: 12000
+    keep-alive-timeout: 12000
+  shutdown: graceful
+  port: 8443
+  ssl:
+    enabled: ${SSL:false}
+    certificate: ${TLS_CERT}
+    certificate-private-key: ${TLS_KEY}
+  #    key-store: ${SSL_JKS:}
+  #    key-store-password: ${SSL_PASS:password}
+  #    key-alias: api
+
+spring:
+  servlet:
+    multipart:
+      max-request-size: -1
+      max-file-size: -1
+#  cloud:
+#    openfeign:
+#      client:
+#        config:
+#          storage:
+#            url:
+  #  cloud:
+  #    kubernetes:
+  #      discovery:
+  #        enabled: true
+  #        all-namespaces: true
+  #        #        master-url: https://kubernetes.default.svc
+  #        #      include-not-ready-addresses: true
+  #        discovery-server-url: ${DISCOVERY_URL}
+  #    discovery:
+  #      client:
+  #        health-indicator:
+  #          enabled: false
+  main:
+    allow-bean-definition-overriding: true
+  lifecycle:
+    timeout-per-shutdown-phase: 10s
+  application:
+    name: ${APP_NAME:gateway}
+  security:
+    oauth2:
+      resource-server:
+        opaque-token:
+          introspection-uri: ${AUTH_URL:http://localhost:9000}/oauth2/introspect
+logging:
+  level:
+    root: ${ROOT_LOG_LEVEL:info}
+    web: ${WEB_LOG_LEVEL:debug}
+    com:
+      elpsykongroo: ${APP_LOG_LEVEL:debug}
+    org:
+      springframework:
+        security: ${SECURITY_LOG_LEVEL:debug}
+#  log4j2:
+#    config:
+#      override:
+#        - classpath:log4j2-spring.xml
+#    org:
+#      springframework:
+#        web:
+#          filter:
+#            CommonsRequestLoggingFilter: DEBUG
+management:
+  tracing:
+    enabled: ${TRACE_ENABLED:false}
+    sampling:
+      probability: ${TRACE_SAMPLING:1.0}
+  httpexchanges:
+    recording:
+      enabled: ${HTTP_RECORD:true}
+  endpoint:
+    health:
+      probes:
+        enabled: true
+    prometheus:
+      enabled: true
+    httpexchanges:
+      enabled: true
+  metrics:
+    tags:
+      application: ${METRICS_TAG:gateway}
+  endpoints:
+    web:
+      cors:
+        allowed-origins: "*"
+        allowed-headers: "*"
+        allowed-methods: OPTIONS, GET
+      exposure:
+        include: ${ENDPOINTS_WEB:health,prometheus}
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_HOST:http://localhost:9411/api/v2/spans}
+
+service:
+  vault:
+    enable: ${VAULT_ENABLE:true}
+    refreshDuration: ${VAULT_REFRESH_DURATION:30000}
+  limit:
+    bucket: true
+    ip:
+      enable: false
+      duration:
+        refresh: 600000
+        white: 10
+        black: 30
+#request:
+#  limit:
+#    global:
+#      tokens: ${GLOBAL_REQUEST_LIMIT:1000}
+#      duration: ${GLOBAL_REQUEST_DURATION:1}
+#      speed: ${GLOBAL_REQUEST_DURATION_SPEED:100}
+#    scope:
+#      tokens: ${REQUEST_LIMIT:100}
+#      duration: ${REQUEST_DURATION:1}
+#      speed: ${REQUEST_DURATION_SPEED:10}
+#  path:
+#    permit: ${PERMIT_PATH:/null}
+#    nonPrivate: ${PUBLIC_PATH:/public}
+#    limit: ${LIMIT_PATH:/}
+#    exclude: ${EXCLUDE_PATH:/actuator}
+#    filter: ${FILTER_PATH:/}
+#  record:
+#    exclude:
+#      path:  ${RECORD_EXCLUDE_PATH:/actuator}
+#      ip:  ${RECORD_EXCLUDE_IP:ip.elpsykongroo.com}
+#  header:
+#    ip: ${IP_HEADER:x-real-ip}
+#    black: ${BLACK_HEADER:x-real-ip}
+#    white: ${WHITE_HEADER:x-real-ip}
+#    record: ${RECORD_HEADER:x-real-ip}

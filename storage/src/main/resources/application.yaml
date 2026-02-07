@@ -1,0 +1,49 @@
+server:
+  http2:
+    enabled: true
+#  netty:
+#    connection-timeout: -1
+  tomcat:
+    connection-timeout: 12000
+    keep-alive-timeout: 12000
+  port: 9999
+spring:
+  servlet:
+    multipart:
+      max-request-size: -1
+      max-file-size: -1
+      resolve-lazily: true
+  lifecycle:
+    timeout-per-shutdown-phase: 10s
+service:
+  vault:
+    enable: ${VAULT_ENABLE:true}
+    refreshDuration: ${VAULT_REFRESH_DURATION:30000}
+  limit:
+    bucket: true
+    ip:
+      enable: true
+logging:
+  level:
+    root: ${ROOT_LOG_LEVEL:info}
+    web: ${WEB_LOG_LEVEL:debug}
+    org:
+      springframework:
+        security: ${SECURITY_LOG_LEVEL:debug}
+    com:
+      elpsykongroo: ${APP_LOG_LEVEL:debug}
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+    prometheus:
+      enabled: true
+  endpoints:
+    web:
+      cors:
+        allowed-origins: "*"
+        allowed-headers: "*"
+        allowed-methods: OPTIONS, GET
+      exposure:
+        include: ${ENDPOINTS_WEB:health,prometheus}

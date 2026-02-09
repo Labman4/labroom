@@ -67,9 +67,9 @@ public class IpPolicyManager {
 
     @Scheduled(fixedDelayString = "${service.limit.ip.duration.refresh:600000}")
     private void updateIpPolicy() {
+        IpPolicy ipPolicy = new IpPolicy();
         String blackList = updateIpList(true);
         String whiteList= updateIpList(false);
-        IpPolicy ipPolicy = new IpPolicy();
         if (StringUtils.isNotBlank(blackList)) {
             JsonNode jsonNode = JsonUtils.toJsonNode(blackList);
             JsonNode hits = jsonNode.get("hits");

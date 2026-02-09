@@ -51,31 +51,29 @@ public class IpPolicyFilter extends OncePerRequestFilter {
         IpPolicy ipPolicy = ipPolicyManager.get();
         String ip = IPUtils.accessIP(request, headers);
         List<IpManage> black = ipPolicy.getBlack();
-        if (black != null && !black.isEmpty()) {
+        if (!PathUtils.beginWithPath(nonPrivate,request.getRequestURI())) {
+            List<IpManage> white = ipPolicy.getWhite();
+            if(white != null && !white.isEmpty()) {
+                boolean flag = false;
+                for (IpManage ipManage : white) {
+                    if (ipManage.getAddress().equals(ip)) {
+                        flag = true;
+                        break;
+                    }
+                }
+                if (!flag) {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType("text/plain;charset=UTF-8");
+                    response.getWriter().write("your ip is not allowed");
+                    return;
+                }
+            }
+        } else if (black != null && !black.isEmpty()) {
             for (IpManage ipManage : black) {
                 if (ipManage.getAddress().equals(ip)) {
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     response.setContentType("text/plain;charset=UTF-8");
                     response.getWriter().write("your ip is blocked");
-                    return;
-                }
-            }
-        }
-        if (!PathUtils.beginWithPath(nonPrivate,request.getRequestURI())) {
-            List<IpManage> white = ipPolicy.getWhite();
-            if(white != null && !white.isEmpty()) {
-                boolean whiteHit = false;
-                for (IpManage ipManage : white) {
-                    if (ipManage.getAddress().equals(ip)) {
-                        whiteHit = true;
-                        break;
-                    }
-                }
-                if (!whiteHit) {
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    response.setContentType("text/plain;charset=UTF-8");
-                    response.getWriter().write("your ip is not allowed");
-                    return;
                 }
             }
         }

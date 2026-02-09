@@ -40,6 +40,7 @@ import com.yubico.webauthn.FinishAssertionOptions;
 import com.yubico.webauthn.FinishRegistrationOptions;
 import com.yubico.webauthn.RegistrationResult;
 import com.yubico.webauthn.RelyingParty;
+import com.yubico.webauthn.StartAssertionOptions;
 import com.yubico.webauthn.StartRegistrationOptions;
 import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
 import com.yubico.webauthn.data.AuthenticatorAttestationResponse;
@@ -156,66 +157,43 @@ public class LoginServiceImpl implements LoginService {
 //            securityContextRepository.saveContext(context, servletRequest, response);
 //            return "200";
 //        }
-        DeferredSecurityContext securityContext = securityContextRepository.loadDeferredContext(servletRequest);
-        if (securityContext.get().getAuthentication() != null) {
-            if (log.isDebugEnabled()) {
-                log.debug("already login");
+        try {
+            DeferredSecurityContext securityContext = securityContextRepository.loadDeferredContext(servletRequest);
+            if (securityContext.get().getAuthentication() != null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("already login");
+                }
+                if (username.equals(securityContext.get().getAuthentication().getName())) {
+                    return "200";
+                } else {
+                    return "202";
+                }
             }
-            if (username.equals(securityContext.get().getAuthentication().getName())) {
-                return "200";
+            User user = userService.loadUserByUsername(username);
+            if (user != null) {
+                if (user.isLocked()) {
+                    return "401";
+                }
+                if (existAuth(user)) {
+                    AssertionRequest request = relyingParty.startAssertion(StartAssertionOptions.builder()
+                            .username(username)
+                            .build());
+                    servletContext.setAttribute(username, request.toJson());
+                    return request.toCredentialsGetJson();
+                } else {
+                    return "400";
+                }
             } else {
-                return "202";
+                if ("admin".equals(username)){
+                    initAdminAuth(initAdminUser());
+                    emailService.sendTmpLoginCert("admin");
+                    return "400";
+                }
+                return "404";
             }
-        } else {
-            SecurityContext context = securityContextHolderStrategy.createEmptyContext();
-            Authentication authentication =
-                    WebAuthnAuthenticationToken.authenticated(
-                            username,
-                            null,
-                            null);
-            context.setAuthentication(authentication);
-            securityContextHolderStrategy.setContext(context);
-            securityContextRepository.saveContext(context, servletRequest, response);
-            return "200";
+        } catch (JsonProcessingException e) {
+            return  "500";
         }
-
-//        try {
-//            DeferredSecurityContext securityContext = securityContextRepository.loadDeferredContext(servletRequest);
-//            if (securityContext.get().getAuthentication() != null) {
-//                if (log.isDebugEnabled()) {
-//                    log.debug("already login");
-//                }
-//                if (username.equals(securityContext.get().getAuthentication().getName())) {
-//                    return "200";
-//                } else {
-//                    return "202";
-//                }
-//            }
-//            User user = userService.loadUserByUsername(username);
-//            if (user != null) {
-//                if (user.isLocked()) {
-//                    return "401";
-//                }
-//                if (existAuth(user)) {
-//                    AssertionRequest request = relyingParty.startAssertion(StartAssertionOptions.builder()
-//                            .username(username)
-//                            .build());
-//                    servletContext.setAttribute(username, request.toJson());
-//                    return request.toCredentialsGetJson();
-//                } else {
-//                    return "400";
-//                }
-//            } else {
-//                if ("admin".equals(username)){
-//                    initAdminAuth(initAdminUser());
-//                    emailService.sendTmpLoginCert("admin");
-//                    return "400";
-//                }
-//                return "404";
-//            }
-//        } catch (JsonProcessingException e) {
-//            return  "500";
-//        }
     }
 
     @Override

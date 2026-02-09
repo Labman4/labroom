@@ -15,10 +15,16 @@ logging:
 #        pool:
 #          enabled: true
 service:
-  limit:
-    bucket: false
-    ip:
-      enable: false
   vault:
     enable: ${VAULT_ENABLE:true}
-    refreshDuration: ${VAULT_REFRESH_DURATION:30000}
+  #    refreshDuration: ${VAULT_REFRESH_DURATION:30000}
+  limit:
+    bucket: ${BUCKET_LIMIT:true}
+    ip:
+      enable: ${IP_LIMIT:true}
+      duration:
+        refresh: ${IP_LIMIT_REFRESH:600000}
+        white: ${IP_WHITE_CACHE_MIN:10}
+        black: ${IP_BLACK_CACHE_MIN:30}
+  record: ${SERVICE_RECORD:true}
+#  security: oauth2

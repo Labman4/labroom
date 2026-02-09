@@ -42,6 +42,7 @@ public class IpPolicyConfig {
     public IpPolicyFilter ipPolicyFilter() {
 
         return new IpPolicyFilter(ipPolicyManager,
-                requestConfig.getHeaders());
+                requestConfig.getHeaders(),
+                requestConfig.getPath().getNonPrivate());
     }
 }

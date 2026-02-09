@@ -18,6 +18,7 @@ package com.elpsykongroo.infra.spring.optional.filter;
 
 import com.elpsykongroo.base.domain.search.repo.IpManage;
 import com.elpsykongroo.base.utils.IPUtils;
+import com.elpsykongroo.base.utils.PathUtils;
 import com.elpsykongroo.infra.spring.domain.IpPolicy;
 import com.elpsykongroo.infra.spring.optional.manager.IpPolicyManager;
 import jakarta.servlet.FilterChain;
@@ -35,9 +36,14 @@ public class IpPolicyFilter extends OncePerRequestFilter {
 
     private String headers;
 
-    public IpPolicyFilter (IpPolicyManager ipPolicyManager, String headers){
+    private String nonPrivate;
+
+    public IpPolicyFilter (IpPolicyManager ipPolicyManager,
+                           String headers,
+                           String nonPrivate){
         this.ipPolicyManager = ipPolicyManager;
         this.headers = headers;
+        this.nonPrivate = nonPrivate;
     }
 
     @Override
@@ -55,23 +61,24 @@ public class IpPolicyFilter extends OncePerRequestFilter {
                 }
             }
         }
-        List<IpManage> white = ipPolicy.getWhite();
-        if(white != null && !white.isEmpty()) {
-            boolean whiteHit = false;
-            for (IpManage ipManage : ipPolicy.getWhite()) {
-                if (ipManage.getAddress().equals(ip)) {
-                    whiteHit = true;
-                    break;
+        if (!PathUtils.beginWithPath(nonPrivate,request.getRequestURI())) {
+            List<IpManage> white = ipPolicy.getWhite();
+            if(white != null && !white.isEmpty()) {
+                boolean whiteHit = false;
+                for (IpManage ipManage : white) {
+                    if (ipManage.getAddress().equals(ip)) {
+                        whiteHit = true;
+                        break;
+                    }
+                }
+                if (!whiteHit) {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType("text/plain;charset=UTF-8");
+                    response.getWriter().write("your ip is not allowed");
+                    return;
                 }
             }
-            if (!whiteHit) {
-                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                response.setContentType("text/plain;charset=UTF-8");
-                response.getWriter().write("your ip is not allowed");
-                return;
-            }
         }
-
         filterChain.doFilter(request, response);
     }
 }

@@ -27,10 +27,14 @@ import java.util.stream.Collectors;
 
 import com.elpsykongroo.base.domain.search.repo.IpManage;
 import com.elpsykongroo.base.domain.search.QueryParam;
+import com.elpsykongroo.base.utils.JsonUtils;
 import com.elpsykongroo.infra.spring.optional.manager.DynamicConfigManager;
 import com.elpsykongroo.base.utils.IPUtils;
 import com.elpsykongroo.infra.spring.service.RedisService;
 import com.elpsykongroo.infra.spring.service.SearchService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.FeignException;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -42,6 +46,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -73,6 +78,8 @@ public class IPMangerServiceImpl implements IPManagerService {
 	@Autowired
 	private RequestConfig requestConfig;
 
+	private final ObjectMapper objectMapper = new ObjectMapper();
+
 	/*
 	 * X-Forwarded-For
 	 * Proxy-Client-IP
@@ -91,7 +98,19 @@ public class IPMangerServiceImpl implements IPManagerService {
 		queryParam.setIndex("ip");
 		queryParam.setParam(isBlack);
 		queryParam.setField("black");
-		return searchService.query(queryParam);
+		String list = null;
+		try {
+			list = searchService.query(queryParam);
+			if (log.isDebugEnabled()) {
+				log.debug("ipList:{}, black:{}", list, isBlack);
+			}
+		} catch (FeignException e) {
+			if (log.isDebugEnabled()) {
+				log.debug("ipList feign error", e);
+			}
+			return "";
+		}
+		return list;
 	}
 
 	@Override
@@ -155,6 +174,7 @@ public class IPMangerServiceImpl implements IPManagerService {
 				}
 			}
 		}
+		updateCache(isBlack);
 		return String.valueOf(updated);
 	}
 
@@ -201,6 +221,7 @@ public class IPMangerServiceImpl implements IPManagerService {
 		if (log.isDebugEnabled()) {
 			log.debug("add ip, result:{}", result);
 		}
+		updateCache(isBlack);
 		return result;
 	}
 
@@ -269,35 +290,6 @@ public class IPMangerServiceImpl implements IPManagerService {
 		return StringUtils.isNotBlank(count) ? Integer.parseInt(count) : 0;
 	}
 
-	public String getIpList(String isBlack) {
-		QueryParam queryParam = new QueryParam();
-		queryParam.setIndex("ip");
-		queryParam.setType(IpManage.class);
-		queryParam.setField("black");
-		queryParam.setParam(isBlack);
-		queryParam.setScrollId("0");
-		String list = null;
-		try {
-			list = searchService.query(queryParam);
-			if (log.isDebugEnabled()) {
-				log.debug("getIpList ipList:{}, black:{}", list, isBlack);
-			}
-		} catch (FeignException e) {
-			if (log.isDebugEnabled()) {
-				log.debug("getIpList feign error", e);
-			}
-			return "";
-		}
-		StringBuffer ipList = new StringBuffer();
-		String[] ips = list.split(",");
-		for (String str: ips) {
-			if(str.contains("address")) {
-				ipList.append(str.split(":")[1]).append(",");
-			}
-		}
-		return ipList.toString();
-	}
-
 	@Override
 	public String accessIP(HttpServletRequest request) {
 		String ip = IPUtils.accessIP(request, requestConfig.getHeaders());
@@ -330,86 +322,99 @@ public class IPMangerServiceImpl implements IPManagerService {
 			}
 		}
 		if (StringUtils.isBlank(list)) {
-			list = getIpList(isBlack);
+			list = list(isBlack, "asc");
 			if (StringUtils.isBlank(list)) {
 				return false;
 			}
 		}
 		if (StringUtils.isNotBlank(list)) {
-			if ("false".equals(isBlack)) {
-				whiteDomain = dynamicConfigManager.get().getWhiteDomain();
-				if (log.isDebugEnabled()) {
-					log.debug("whiteDomain:{}", whiteDomain);
-				}
-				for (String d : whiteDomain.split(",")) {
-					if (!list.contains(d) && d.contains("/")) {
-						add(Collections.singleton(d).stream().toList(), "false");
-					}
-					InetAddress[] inetAddress;
-					try {
-						inetAddress = InetAddress.getAllByName(d);
-					} catch (UnknownHostException e) {
-						if (log.isDebugEnabled()) {
-							log.debug("whiteDomain unknown host:{}", d);
-						}
-						continue;
-					}
-					for (InetAddress address : inetAddress) {
-						if (!list.contains(address.getHostAddress())) {
-							if (log.isWarnEnabled()) {
-								log.warn("out of white:{}", address.getHostAddress());
-							}
-							initWhite();
-						}
-					}
-				}
+			JsonNode jsonNode = JsonUtils.toJsonNode(list);
+			JsonNode hits = jsonNode.get("hits");
+			List<IpManage> ipManages = new ArrayList<>();
+			if (hits != null && !hits.isEmpty()) {
+				ipManages = objectMapper.convertValue(hits, new TypeReference<List<IpManage>>() {
+				});
 			}
-
-			for (String d : list.split(",")) {
-				if (d.contains("/")) {
-					try {
-						if (IPUtils.isInRange(ip, d)) {
-							return true;
-						}
-					} catch (UnknownHostException e) {
-						if (log.isDebugEnabled()) {
-							log.debug("ip range unknown host");
-						}
-					}
-				} else if (ip.equals(d)) {
-					return true;
-				} else {
-					if (log.isWarnEnabled()) {
-						log.warn("try to query domain in cacheList: {}", d);
-					}
-					if (IPUtils.validateHost(d)) {
-						InetAddress[] inetAddress;
+//			if ("false".equals(isBlack)) {
+//				whiteDomain = dynamicConfigManager.get().getWhiteDomain();
+//				if (log.isDebugEnabled()) {
+//					log.debug("whiteDomain:{}", whiteDomain);
+//				}
+//				for (String d : whiteDomain.split(",")) {
+//					boolean flag = false;
+//					for (IpManage ipManage: ipManages) {
+//						if (ipManage.getAddress().equals(ip)) {
+//							flag = true;
+//						}
+//					}
+//					if (!flag) {
+//						add(Collections.singleton(d).stream().toList(), "false");
+//					}
+//					InetAddress[] inetAddress;
+//					try {
+//						inetAddress = InetAddress.getAllByName(d);
+//					} catch (UnknownHostException e) {
+//						if (log.isDebugEnabled()) {
+//							log.debug("whiteDomain unknown host:{}", d);
+//						}
+//						continue;
+//					}
+//					for (InetAddress address : inetAddress) {
+//						boolean dnsflag = false;
+//						for (IpManage ipManage: ipManages) {
+//							if (ipManage.getAddress().equals(address.getHostAddress())) {
+//								dnsflag = true;
+//							}
+//						}
+//						if (!dnsflag) {
+//							if (log.isWarnEnabled()) {
+//								log.warn("out of white:{}", address.getHostAddress());
+//							}
+//							add(Collections.singleton(address.getHostAddress()).stream().toList(), isBlack);
+//						}
+//					}
+//				}
+//			}
+			if (ipManages != null && ipManages.isEmpty()) {
+				for (IpManage ipManage : ipManages) {
+					if (ip.equals(ipManage.getAddress())) {
+						return true;
+					} else if (ipManage.getAddress().contains("/")) {
 						try {
-							inetAddress = InetAddress.getAllByName(d);
-						} catch (UnknownHostException e) {
-							continue;
-						}
-						for (InetAddress address : inetAddress) {
-							if (log.isWarnEnabled()) {
-								log.warn("try to update domain: {}", address);
-							}
-							if (address.getHostAddress().equals(ip)) {
-								if (log.isWarnEnabled()) {
-									log.warn("update domain ip: {}", address.getHostAddress());
-								}
-								add(Collections.singleton(address.getHostAddress()).stream().toList(), isBlack);
+							if (IPUtils.isInRange(ip, ipManage.getAddress())) {
 								return true;
 							}
+						} catch (UnknownHostException e) {
+							if (log.isDebugEnabled()) {
+								log.debug("ip range unknown host");
+							}
+						}
+					} else {
+						if (log.isWarnEnabled()) {
+							log.warn("try to query domain in cacheList: {}", ipManage.getAddress());
+						}
+						if (IPUtils.validateHost(ipManage.getAddress())) {
+							InetAddress[] inetAddress;
+							try {
+								inetAddress = InetAddress.getAllByName(ipManage.getAddress());
+							} catch (UnknownHostException e) {
+								continue;
+							}
+							for (InetAddress address : inetAddress) {
+								if (log.isWarnEnabled()) {
+									log.warn("try to update domain: {}", address);
+								}
+								if (address.getHostAddress().equals(ip)) {
+									if (log.isWarnEnabled()) {
+										log.warn("update domain ip: {}", address.getHostAddress());
+									}
+									add(Collections.singleton(address.getHostAddress()).stream().toList(), isBlack);
+									return true;
+								}
+							}
 						}
 					}
 				}
-			}
-		} else {
-			if(log.isWarnEnabled()) {
-				log.warn("updateCache");
-			}
-			if ("false".equals(isBlack)) {
-				initWhite();
 			}
 		}
 		/**
@@ -431,7 +436,22 @@ public class IPMangerServiceImpl implements IPManagerService {
 		return false;
     }
 
+	private void updateCache(String isBlack) {
+		String ipList = list(isBlack, "asc");
+		try {
+			if (StringUtils.isNotBlank(ipList)) {
+				redisService.set(isBlack + "@" + env, ipList, "");
+			}
+		} catch (FeignException e) {
+			if (log.isDebugEnabled()) {
+				log.debug("updateCache feign error", e);
+			}
+		}
+	}
+
+	@Scheduled(fixedDelayString = "${service.limit.ip.duration.refresh:60000}")
 	private void initWhite() {
+		whiteDomain = dynamicConfigManager.get().getWhiteDomain();
 		for(String d: whiteDomain.split(",")) {
 			add(Collections.singleton(d).stream().toList(), "false");
 		}

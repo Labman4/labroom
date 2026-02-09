@@ -16,6 +16,7 @@
 
 package com.elpsykongroo.infra.spring.optional.config;
 
+import com.elpsykongroo.infra.spring.config.AccessManager;
 import com.elpsykongroo.infra.spring.config.RequestConfig;
 import com.elpsykongroo.infra.spring.handler.SpaCsrfTokenRequestHandler;
 import com.elpsykongroo.infra.spring.optional.filter.CsrfSessionFilter;
@@ -42,6 +43,9 @@ public class SecurityConfig {
 	@Autowired
 	private RequestConfig requestConfig;
 
+	@Autowired
+	private AccessManager accessManager;
+
 	@Bean
 	public DefaultSecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		HttpSessionRequestCache requestCache = new HttpSessionRequestCache();
@@ -50,7 +54,7 @@ public class SecurityConfig {
 				.csrf((csrf) -> csrf
 						.csrfTokenRepository(httpSessionCsrfTokenRepository())
 						.csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
-						.ignoringRequestMatchers("ip", "search", "record", "message/**", "redis/**", "storage/**", "app/**", "public/**")
+						.ignoringRequestMatchers("ip", "search", "record", "message/**", "redis/**", "storage/**", "app/**")
 				)
 				.addFilterAfter(csrfSessionFilter(), BasicAuthenticationFilter.class)
 //				.csrf(csrf -> csrf.disable())
@@ -62,6 +66,8 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.GET,"/storage/**").permitAll()
 						.requestMatchers(HttpMethod.POST, "/ip").permitAll()
 						.requestMatchers(HttpMethod.POST, "/search").permitAll()
+						.requestMatchers(HttpMethod.PUT, "/redis/**").permitAll()
+						.requestMatchers(HttpMethod.GET, "/redis/**").permitAll()
 						.requestMatchers(HttpMethod.PUT, "/notice/register").permitAll()
 						.requestMatchers(HttpMethod.GET, "/notice/user").permitAll()
 						.requestMatchers(HttpMethod.GET, "/message/publicKey").permitAll()
@@ -81,7 +87,7 @@ public class SecurityConfig {
 						.requestMatchers("/auth/user/list").hasAuthority("admin")
 						.requestMatchers("/auth/user/**").authenticated()
 						.requestMatchers("/auth/**").hasAuthority("admin")
-						.anyRequest().authenticated()
+						.anyRequest().access(accessManager)
 				)
 				.oauth2ResourceServer(rs -> rs.opaqueToken(withDefaults()))
 				.requestCache(

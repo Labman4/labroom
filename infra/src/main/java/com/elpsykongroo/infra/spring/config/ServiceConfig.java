@@ -56,6 +56,8 @@ public class ServiceConfig {
 
     private Vault vault;
 
+    private boolean record;
+
     @Data
     public static class SSL {
         

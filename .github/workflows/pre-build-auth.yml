@@ -17,9 +17,9 @@ jobs:
     secrets: inherit
     with:
       module: auth
-      version: 0.0.2
+      version: 1.0.0
       secretPath: kv/app/native/auth
-      native: true
+      native: false
       
       
  

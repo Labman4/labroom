@@ -113,13 +113,17 @@ public class AuthorizationServerConfig {
 //					.authorizationRequestResolver(resolver);
 
 		http.apply(authorizationServerConfigurer);
-		http
-			.securityMatcher(endpointsMatcher)
-				.sessionManagement( s ->
-								s.sessionCreationPolicy(SessionCreationPolicy.NEVER)
-										.maximumSessions(1)
+		http.securityMatcher(endpointsMatcher)
+				.csrf(csrf -> csrf
+						.ignoringRequestMatchers(
+								authorizationServerConfigurer.getEndpointsMatcher()
+						)
+				)
+			.sessionManagement( s ->
+							s.sessionCreationPolicy(SessionCreationPolicy.NEVER)
+									.maximumSessions(1)
 //							.maxSessionsPreventsLogin(true)
-				);
+			);
 		HttpSessionRequestCache requestCache = new HttpSessionRequestCache();
 		requestCache.setRequestMatcher(new AntPathRequestMatcher("/oauth2/authorize/**"));
 		http.httpBasic((basic) -> basic

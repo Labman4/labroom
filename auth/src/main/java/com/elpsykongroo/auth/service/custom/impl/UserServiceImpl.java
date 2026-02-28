@@ -21,6 +21,8 @@ import com.elpsykongroo.auth.entity.user.Group;
 import com.elpsykongroo.auth.entity.user.User;
 import com.elpsykongroo.auth.entity.user.UserInfo;
 import com.elpsykongroo.auth.repository.user.UserRepository;
+import com.elpsykongroo.auth.service.custom.AuthorityService;
+import com.elpsykongroo.auth.service.custom.GroupService;
 import com.elpsykongroo.auth.service.custom.UserService;
 import com.elpsykongroo.base.utils.JsonUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -50,6 +52,13 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private AuthorityService authorityService;
+
+    @Autowired
+    private GroupService groupService;
+
 
     @Override
     public User loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -153,9 +162,12 @@ public class UserServiceImpl implements UserService {
             return new ArrayList<>();
         }
         List<Authority> authorities = new ArrayList<>();
-        authorities.addAll(user.getAuthorities());
-        for (Group group : user.getGroups()) {
-            authorities.addAll(group.getAuthorities());
+        List<Authority> authorityList = authorityService.userAuthority(user.getId());
+        authorities.addAll(authorityList);
+        List<Group> groups = groupService.userGroup(user.getId());
+        for (Group group : groups) {
+            List<Authority> groupAuthority = authorityService.findByGroup(group.getId());
+            authorities.addAll(groupAuthority);
         }
         return authorities.stream().distinct().collect(Collectors.toList());
     }

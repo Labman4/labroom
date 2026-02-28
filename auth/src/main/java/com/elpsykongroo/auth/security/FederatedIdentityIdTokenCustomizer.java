@@ -31,6 +31,8 @@ import com.elpsykongroo.auth.entity.user.Authority;
 import com.elpsykongroo.auth.entity.user.Group;
 import com.elpsykongroo.auth.entity.user.OidcInfo;
 import com.elpsykongroo.auth.entity.user.User;
+import com.elpsykongroo.auth.service.custom.AuthorityService;
+import com.elpsykongroo.auth.service.custom.GroupService;
 import com.elpsykongroo.auth.service.custom.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +47,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Component
@@ -52,6 +55,12 @@ public final class FederatedIdentityIdTokenCustomizer implements OAuth2TokenCust
 
 	@Autowired
 	private UserService userService;
+
+	@Autowired
+	private GroupService groupService;
+
+	@Autowired
+	private AuthorityService authorityService;
 
 	private static final Set<String> ID_TOKEN_CLAIMS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
 			IdTokenClaimNames.ISS,
@@ -72,12 +81,7 @@ public final class FederatedIdentityIdTokenCustomizer implements OAuth2TokenCust
 	public void customize(JwtEncodingContext context) {
 		if (OidcParameterNames.ID_TOKEN.equals(context.getTokenType().getValue())) {
 			User user = userService.loadUserByUsername(context.getPrincipal().getName());
-			List<Authority> authorityList = user.getAuthorities();
-			List<String> groups = new ArrayList<>();
-			for (Group group : user.getGroups()) {
-				groups.add(group.getGroupName());
-				authorityList.addAll(group.getAuthorities());
-			}
+			List<Authority> authorityList = authorityService.userAuthority(user.getId());
 			Map<String, Object> customClaims = new HashMap<>();
 			Map<String, Object> info = user.getUserInfo();
 			OidcUserInfo userInfo;
@@ -101,6 +105,7 @@ public final class FederatedIdentityIdTokenCustomizer implements OAuth2TokenCust
 							authList.add(auth[1]);
 						}
 						if ("group".equals(authority.getAuthority())) {
+							List<Group> groups = groupService.userGroup(user.getId());
 							info.put("group", groups);
 						}
 					}

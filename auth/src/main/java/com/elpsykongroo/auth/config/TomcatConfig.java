@@ -17,23 +17,24 @@
 package com.elpsykongroo.auth.config;
 
 import org.apache.catalina.connector.Connector;
-import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
+import org.springframework.boot.tomcat.servlet.TomcatServletWebServerFactory;
+import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration(proxyBeanMethods = false)
 public class TomcatConfig {
     @Bean
-    public TomcatServletWebServerFactory servletContainer() {
-        TomcatServletWebServerFactory tomcat = new TomcatServletWebServerFactory();
-        tomcat.addAdditionalTomcatConnectors(createStandardConnector());
-        return tomcat;
+    public WebServerFactoryCustomizer<TomcatServletWebServerFactory> connectorCustomizer() {
+        return (tomcat) -> tomcat.addAdditionalConnectors(createHttpConnector());
     }
-    private Connector createStandardConnector() {
+
+    private Connector createHttpConnector() {
         Connector connector = new Connector(TomcatServletWebServerFactory.DEFAULT_PROTOCOL);
         connector.setScheme("http");
         connector.setPort(9001);
         connector.setSecure(false);
+        connector.setRedirectPort(9443);
         return connector;
     }
 }

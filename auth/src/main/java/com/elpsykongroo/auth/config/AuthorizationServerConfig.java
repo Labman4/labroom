@@ -16,8 +16,9 @@
 
 package com.elpsykongroo.auth.config;
 
-import com.elpsykongroo.auth.security.FederatedIdentityAuthenticationEntryPoint;
+import com.elpsykongroo.auth.security.convert.PublicClientRefreshTokenAuthenticationConverter;
 import com.elpsykongroo.auth.security.convert.PublicRevokeAuthenticationConverter;
+import com.elpsykongroo.auth.security.provider.PublicClientRefreshTokenAuthenticationProvider;
 import com.elpsykongroo.auth.security.provider.WebAuthnAuthenticationProvider;
 import com.elpsykongroo.auth.utils.jose.Jwks;
 import com.nimbusds.jose.jwk.JWKSet;
@@ -32,11 +33,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.config.annotation.ObjectPostProcessor;
+import org.springframework.lang.Nullable;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.session.SessionRegistry;
-import org.springframework.security.core.session.SessionRegistryImpl;
+import org.springframework.security.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.client.JdbcOAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientProvider;
@@ -46,21 +46,29 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.web.AuthenticatedPrincipalOAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
+import org.springframework.security.oauth2.core.OAuth2RefreshToken;
+import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
-import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
-import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
+import org.springframework.security.oauth2.server.authorization.token.DelegatingOAuth2TokenGenerator;
+import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
+import org.springframework.security.oauth2.server.authorization.token.JwtGenerator;
+import org.springframework.security.oauth2.server.authorization.token.OAuth2RefreshTokenGenerator;
+import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenContext;
+import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
+import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
-import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
-import static org.springframework.security.config.Customizer.withDefaults;
+import java.time.Instant;
+import java.util.Base64;
 
+import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration(proxyBeanMethods = false)
 public class AuthorizationServerConfig {
@@ -71,76 +79,39 @@ public class AuthorizationServerConfig {
 	RegisteredClientRepository registeredClientRepository;
 
 	@Autowired
-	private FederatedIdentityAuthenticationEntryPoint authenticationEntryPoint;
+	OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer;
 
 	@Bean
 	@Order(Ordered.HIGHEST_PRECEDENCE)
 	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
-		OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
-		OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = http.getConfigurer(OAuth2AuthorizationServerConfigurer.class);
-		http.oauth2ResourceServer(rs -> rs.opaqueToken(withDefaults()));
-		RequestMatcher endpointsMatcher = authorizationServerConfigurer.getEndpointsMatcher();
-//		Function<OidcUserInfoAuthenticationContext, OidcUserInfo> userInfoMapper = (context) -> {
-//			OidcUserInfoAuthenticationToken authentication = context.getAuthentication();
-//			JwtAuthenticationToken principal = (JwtAuthenticationToken) authentication.getPrincipal();
-//			return new OidcUserInfo(principal.getToken().getClaims());
-//		};
 
-//		OAuth2ClientAuthorizationRequestResolver resolver = new OAuth2ClientAuthorizationRequestResolver(clientRegistrationRepository);
-//		resolver.setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce());
+////		Function<OidcUserInfoAuthenticationContext, OidcUserInfo> userInfoMapper = (context) -> {
+////			OidcUserInfoAuthenticationToken authentication = context.getAuthentication();
+////			JwtAuthenticationToken principal = (JwtAuthenticationToken) authentication.getPrincipal();
+////			return new OidcUserInfo(principal.getToken().getClaims());
+////		};
+//
+////		OAuth2ClientAuthorizationRequestResolver resolver = new OAuth2ClientAuthorizationRequestResolver(clientRegistrationRepository);
+////		resolver.setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce());
+//
 
-		authorizationServerConfigurer
-				.oidc(withDefaults())
-//				.oidc((oidc) -> oidc
-//						.userInfoEndpoint((userInfo) -> userInfo
-//								.userInfoMapper(userInfoMapper)
-//						)
-//						.providerConfigurationEndpoint(Customizer.withDefaults())
-//						.clientRegistrationEndpoint(Customizer.withDefaults())
-//				)
-				.authorizationEndpoint(withDefaults())
-				.clientAuthentication(clientAuthentication ->
-						clientAuthentication
+		http.oauth2AuthorizationServer((authorizationServer) -> {
+					http.securityMatcher(authorizationServer.getEndpointsMatcher())
+							.cors(Customizer.withDefaults())
+							.csrf((csrf)-> csrf
+									.ignoringRequestMatchers(authorizationServer.getEndpointsMatcher()));
+
+					authorizationServer.oidc(Customizer.withDefaults())
+
+							.clientAuthentication(clientAuthentication -> clientAuthentication
 								.authenticationConverter(new PublicRevokeAuthenticationConverter(registeredClientRepository))
 								.authenticationProvider(new WebAuthnAuthenticationProvider()))
-				.tokenRevocationEndpoint(tokenRevocationEndpoint ->
-						tokenRevocationEndpoint
-								.revocationRequestConverter(new PublicRevokeAuthenticationConverter(registeredClientRepository))
-				);
-
-//				.oauth2Client()
-//					.authorizationCodeGrant()
-//					.authorizationRequestResolver(resolver);
-
-		http.apply(authorizationServerConfigurer);
-		http.securityMatcher(endpointsMatcher)
-				.csrf(csrf -> csrf
-						.ignoringRequestMatchers(
-								authorizationServerConfigurer.getEndpointsMatcher()
-						)
-				)
-			.sessionManagement( s ->
-							s.sessionCreationPolicy(SessionCreationPolicy.NEVER)
-									.maximumSessions(1)
-//							.maxSessionsPreventsLogin(true)
-			);
-		HttpSessionRequestCache requestCache = new HttpSessionRequestCache();
-		requestCache.setRequestMatcher(new AntPathRequestMatcher("/oauth2/authorize/**"));
-		http.httpBasic((basic) -> basic
-					.addObjectPostProcessor(new ObjectPostProcessor<BasicAuthenticationFilter>() {
-						@Override
-						public <O extends BasicAuthenticationFilter> O postProcess(O filter) {
-							filter.setSecurityContextRepository(new HttpSessionSecurityContextRepository());
-							return filter;
-						}
-					}))
-				.cors(withDefaults())
-				.requestCache(
-						cache -> cache.requestCache(requestCache)
-				)
-				.exceptionHandling(exceptionHandling ->
-						exceptionHandling.authenticationEntryPoint(authenticationEntryPoint)
-				);
+							.tokenRevocationEndpoint(tokenRevocationEndpoint -> tokenRevocationEndpoint
+								.revocationRequestConverter(new PublicRevokeAuthenticationConverter(registeredClientRepository)))
+							.clientAuthentication(clientAuthentication -> clientAuthentication
+								.authenticationConverter(new PublicClientRefreshTokenAuthenticationConverter())
+								.authenticationProvider(new PublicClientRefreshTokenAuthenticationProvider(registeredClientRepository)));
+				});
 		return http.build();
 	}
 
@@ -189,13 +160,29 @@ public class AuthorizationServerConfig {
 	}
 
 	@Bean
-	public SessionRegistry sessionRegistry() {
-		return new SessionRegistryImpl();
-	}
-
-	@Bean
 	public HttpSessionEventPublisher httpSessionEventPublisher() {
 		return new HttpSessionEventPublisher();
 	}
+	@Bean
+	OAuth2TokenGenerator<?> tokenGenerator() {
+		JwtGenerator jwtGenerator = new JwtGenerator(new NimbusJwtEncoder(jwkSource()));
+        jwtGenerator.setJwtCustomizer(jwtCustomizer);
+		OAuth2TokenGenerator<OAuth2RefreshToken> refreshTokenGenerator = new CustomRefreshTokenGenerator();
+		return new DelegatingOAuth2TokenGenerator(jwtGenerator, refreshTokenGenerator);
+	}
 
+	private static final class CustomRefreshTokenGenerator implements OAuth2TokenGenerator<OAuth2RefreshToken> {
+		private final OAuth2RefreshTokenGenerator delegate = new OAuth2RefreshTokenGenerator();
+
+		@Nullable
+		@Override
+		public OAuth2RefreshToken generate(OAuth2TokenContext context) {
+			if (context.getAuthorizedScopes().contains(OidcScopes.OPENID) &&
+					!context.getAuthorizedScopes().contains("offline_access")) {
+				return null;
+			}
+			return this.delegate.generate(context);
+		}
+
+	}
 }

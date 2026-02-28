@@ -30,8 +30,6 @@ import jakarta.persistence.Table;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.LazyCollection;
-import org.hibernate.annotations.LazyCollectionOption;
 import org.springframework.security.core.GrantedAuthority;
 
 import java.util.List;
@@ -48,7 +46,6 @@ public class Authority implements GrantedAuthority {
     private String id;
 
     @ManyToMany
-    @LazyCollection(LazyCollectionOption.FALSE)
     @JsonIgnore
     @JoinTable(
             name = "user_authority",
@@ -58,7 +55,6 @@ public class Authority implements GrantedAuthority {
     private List<User> users;
 
     @ManyToMany(cascade = CascadeType.ALL)
-    @LazyCollection(LazyCollectionOption.FALSE)
     @JsonIgnore
     @JoinTable(
             name = "group_authority",

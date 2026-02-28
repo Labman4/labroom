@@ -14,16 +14,24 @@
  * limitations under the License.
  */
 
-package com.elpsykongroo.infra.spring.domain;
+package com.elpsykongroo.auth.service;
 
-import com.elpsykongroo.base.domain.search.repo.IpManage;
-import lombok.Data;
+import com.elpsykongroo.base.domain.message.Message;
+import feign.Headers;
+import feign.Param;
+import feign.RequestLine;
 
-import java.util.List;
+public interface MessageService {
 
-@Data
-public class IpPolicy {
-    private List<IpManage> black;
+    @RequestLine("GET /message/publicKey")
+    String getPublicKey();
 
-    private List<IpManage> white;
+    @RequestLine("GET /message?text={text}")
+    String getMessage(@Param String text);
+
+    @RequestLine("PUT /message")
+    @Headers({
+            "Content-Type: application/json"
+    })
+    String setMessage(Message message);
 }

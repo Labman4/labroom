@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.elpsykongroo.auth.security.provider;
+package com.elpsykongroo.auth.security.token;
 
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;

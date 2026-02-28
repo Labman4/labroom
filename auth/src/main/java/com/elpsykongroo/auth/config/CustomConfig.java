@@ -16,31 +16,41 @@
 
 package com.elpsykongroo.auth.config;
 
-import com.elpsykongroo.base.config.LimitConfig;
-import com.elpsykongroo.base.optional.filter.ThrottlingFilter;
+import com.elpsykongroo.auth.filter.IpPolicyFilter;
+import com.elpsykongroo.auth.filter.RecordFilter;
+import com.elpsykongroo.auth.manager.DynamicConfigManager;
+import com.elpsykongroo.auth.manager.IpPolicyManager;
+import com.elpsykongroo.auth.service.GatewayService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import javax.sql.DataSource;
-
 @Configuration(proxyBeanMethods = false)
-public class LimitBucketConfig {
+public class CustomConfig {
     @Autowired
     private RequestConfig requestConfig;
 
     @Autowired
-    private DataSource dataSource;
+    private IpPolicyManager ipPolicyManager;
+
+
+    @Autowired
+    private DynamicConfigManager dynamicConfigManager;
+
+    @Autowired
+    private GatewayService gatewayService;
 
     @Bean
-    public ThrottlingFilter throttlingFilter() {
-        return new ThrottlingFilter(new LimitConfig(
-                requestConfig.getGlobal().getTokens(),
-                requestConfig.getGlobal().getDuration(),
-                requestConfig.getGlobal().getSpeed(),
-                requestConfig.getScope().getTokens(),
-                requestConfig.getScope().getDuration(),
-                requestConfig.getScope().getSpeed()
-        ), dataSource);
+    public IpPolicyFilter ipPolicyFilter() {
+        return new IpPolicyFilter(ipPolicyManager,
+                requestConfig.getHeaders(),
+                requestConfig.getPath().getNonPrivate());
+    }
+
+    @Bean
+    public RecordFilter recordFilter() {
+        return new RecordFilter(requestConfig.getHeaders(),
+                dynamicConfigManager,
+                gatewayService);
     }
 }

@@ -16,6 +16,7 @@
 
 package com.elpsykongroo.auth.security.provider;
 
+import com.elpsykongroo.auth.security.token.WebAuthnAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;

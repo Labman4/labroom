@@ -38,7 +38,6 @@ public class RpConfig {
     private String origin;
 
     @Bean
-    @Autowired
     public RelyingParty relyingParty(RegistrationService regisrationRepository) {
         RelyingPartyIdentity rpIdentity = RelyingPartyIdentity.builder()
                 .id(hostname)

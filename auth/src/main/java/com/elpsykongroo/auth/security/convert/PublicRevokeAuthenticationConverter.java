@@ -33,6 +33,7 @@ public class PublicRevokeAuthenticationConverter implements AuthenticationConver
     }
     @Autowired
     private RegisteredClientRepository repository;
+
     @Override
     public Authentication convert(HttpServletRequest request) {
         String token = request.getParameter("token");

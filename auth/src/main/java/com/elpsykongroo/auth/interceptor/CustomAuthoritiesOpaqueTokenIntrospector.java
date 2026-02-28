@@ -24,8 +24,8 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.DefaultOAuth2AuthenticatedPrincipal;
 import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
-import org.springframework.security.oauth2.server.resource.introspection.NimbusOpaqueTokenIntrospector;
 import org.springframework.security.oauth2.server.resource.introspection.OpaqueTokenIntrospector;
+import org.springframework.security.oauth2.server.resource.introspection.SpringOpaqueTokenIntrospector;
 import org.springframework.stereotype.Component;
 
 import java.util.Collection;
@@ -48,8 +48,10 @@ public class CustomAuthoritiesOpaqueTokenIntrospector implements OpaqueTokenIntr
 
     @Override
     public OAuth2AuthenticatedPrincipal introspect(String token) {
-        OpaqueTokenIntrospector delegate =
-                new NimbusOpaqueTokenIntrospector(introspectionUri, clientId, clientSecret);
+        OpaqueTokenIntrospector delegate =  SpringOpaqueTokenIntrospector
+                .withIntrospectionUri(introspectionUri)
+                .clientId(clientId)
+                .clientSecret(clientSecret).build();
         OAuth2AuthenticatedPrincipal principal = delegate.introspect(token);
         return new DefaultOAuth2AuthenticatedPrincipal(
                 principal.getName(), principal.getAttributes(), extractAuthorities(principal));

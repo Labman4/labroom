@@ -16,11 +16,14 @@
 
 package com.elpsykongroo.auth.config;
 
-import com.elpsykongroo.infra.spring.config.ServiceConfig;
+import com.elpsykongroo.auth.filter.CsrfSessionFilter;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.ObjectPostProcessor;
+import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -28,14 +31,23 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.csrf.CsrfTokenRequestHandler;
+import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
+import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.util.StringUtils;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.config.Customizer;
+
+import java.util.function.Supplier;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
@@ -49,38 +61,62 @@ public class DefaultSecurityConfig {
 	private ServiceConfig serviceConfig;
 
 	@Bean
+	@Order(999)
 	public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
-		http
-			.formLogin(f -> f.disable())
-			.logout((logout) -> logout
-					.clearAuthentication(true)
-					.invalidateHttpSession(true)
-					.addLogoutHandler(new SecurityContextLogoutHandler())
-					);
-		http
-				.sessionManagement( s ->
-								s.sessionCreationPolicy(SessionCreationPolicy.NEVER)
-										.maximumSessions(1)
-//							.maxSessionsPreventsLogin(true)
-				);
-		http.oauth2ResourceServer(rs -> rs.opaqueToken(withDefaults()));
 		HttpSessionRequestCache requestCache = new HttpSessionRequestCache();
-		requestCache.setRequestMatcher(new AntPathRequestMatcher("/oauth2/authorize/**"));
-		http.httpBasic((basic) -> basic
-						.addObjectPostProcessor(new ObjectPostProcessor<BasicAuthenticationFilter>() {
-							@Override
-							public <O extends BasicAuthenticationFilter> O postProcess(O filter) {
-								filter.setSecurityContextRepository(new HttpSessionSecurityContextRepository());
-								return filter;
-							}
-						}))
+		requestCache.setRequestMatcher(PathPatternRequestMatcher.pathPattern("/oauth2/authorize/**"));
+		http
 				.cors(withDefaults())
-				.requestCache(
-					cache -> cache.requestCache(requestCache)
+				.formLogin(f->f.disable())
+				.logout((logout) -> logout
+						.clearAuthentication(true)
+						.invalidateHttpSession(true)
+						.addLogoutHandler(new SecurityContextLogoutHandler())
 				)
-				.exceptionHandling(exceptionHandling ->
-						exceptionHandling.authenticationEntryPoint(authenticationEntryPoint())
-				);
+				.requestCache(
+						cache -> cache.requestCache(requestCache)
+				)
+				.csrf(csrf->csrf
+						.csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
+				.addFilterAfter(new CsrfSessionFilter(new HttpSessionCsrfTokenRepository()), BasicAuthenticationFilter.class)
+				.authorizeHttpRequests((authorize) -> authorize
+						.requestMatchers(HttpMethod.GET,"/email/verify/**").permitAll()
+						.requestMatchers(
+								"/login",
+								"/welcome",
+								"/register",
+								"/finishAuth").permitAll()
+						.anyRequest().authenticated());
+
+		return http.build();
+	}
+
+	@Bean
+	@Order(0)
+	public SecurityFilterChain tmpChain(HttpSecurity http) throws Exception {
+		http.securityMatcher("/tmp", "/email/tmp")
+				.cors(withDefaults())
+				.csrf(csrf->csrf.disable())
+				.authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+		return http.build();
+	}
+
+	@Bean
+	@Order(900)
+	public SecurityFilterChain authFilterChain(HttpSecurity http) throws Exception {
+		http.securityMatcher("/auth/**")
+				.cors(withDefaults())
+				.sessionManagement(sm ->
+						sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+				)
+				.oauth2ResourceServer(oauth2 ->
+						oauth2.opaqueToken(Customizer.withDefaults()))
+				.authorizeHttpRequests((authorize) -> authorize
+				.requestMatchers("/auth/user/authority/**").permitAll()
+				.requestMatchers("/auth/user/list").hasAuthority("admin")
+				.requestMatchers("/auth/user/**").authenticated()
+				.requestMatchers("/auth/**").hasAuthority("admin"));
+
 		return http.build();
 	}
 
@@ -100,7 +136,39 @@ public class DefaultSecurityConfig {
 	}
 
 	@Bean
-	public AuthenticationEntryPoint authenticationEntryPoint() {
-		return new LoginUrlAuthenticationEntryPoint(serviceConfig.getUrl().getLoginPage());
+	public CorsConfigurationSource corsConfigurationSource() {
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		CorsConfiguration config = new CorsConfiguration();
+		config.addAllowedHeader("*");
+		config.addAllowedMethod("*");
+		config.addExposedHeader("X-CSRF-TOKEN");
+		config.addAllowedOrigin(serviceConfig.getUrl().getLoginPage());
+		config.setAllowCredentials(true);
+		source.registerCorsConfiguration("/**", config);
+		return source;
+	}
+
+	private static final class SpaCsrfTokenRequestHandler implements CsrfTokenRequestHandler {
+		private final CsrfTokenRequestAttributeHandler plain = new CsrfTokenRequestAttributeHandler();
+		private final CsrfTokenRequestAttributeHandler xor = new XorCsrfTokenRequestAttributeHandler();
+
+		SpaCsrfTokenRequestHandler() {
+			this.xor.setCsrfRequestAttributeName((String)null);
+		}
+
+		@Override
+		public void handle(HttpServletRequest request, HttpServletResponse response, Supplier<CsrfToken> csrfToken) {
+			/*
+			 * Always use XorCsrfTokenRequestAttributeHandler to provide BREACH protection of
+			 * the CsrfToken when it is rendered in the response body.
+			 */
+			this.xor.handle(request, response, csrfToken);
+		}
+
+		@Override
+		public String resolveCsrfTokenValue(HttpServletRequest request, CsrfToken csrfToken) {
+			String headerValue = request.getHeader(csrfToken.getHeaderName());
+			return (StringUtils.hasText(headerValue) ? this.plain : this.xor).resolveCsrfTokenValue(request, csrfToken);
+		}
 	}
 }

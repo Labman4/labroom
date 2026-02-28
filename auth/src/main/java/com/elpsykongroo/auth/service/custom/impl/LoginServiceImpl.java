@@ -19,17 +19,17 @@ package com.elpsykongroo.auth.service.custom.impl;
 import com.elpsykongroo.auth.entity.user.Authenticator;
 import com.elpsykongroo.auth.entity.user.Authority;
 import com.elpsykongroo.auth.entity.user.User;
-import com.elpsykongroo.auth.security.provider.WebAuthnAuthenticationToken;
+import com.elpsykongroo.auth.security.token.WebAuthnAuthenticationToken;
 import com.elpsykongroo.auth.service.custom.AuthenticatorService;
 import com.elpsykongroo.auth.service.custom.AuthorityService;
 import com.elpsykongroo.auth.service.custom.AuthorizationService;
 import com.elpsykongroo.auth.service.custom.EmailService;
 import com.elpsykongroo.auth.service.custom.LoginService;
 import com.elpsykongroo.auth.service.custom.UserService;
-import com.elpsykongroo.infra.spring.config.ServiceConfig;
+import com.elpsykongroo.auth.config.ServiceConfig;
 import com.elpsykongroo.base.domain.message.Message;
-import com.elpsykongroo.infra.spring.service.MessageService;
-import com.elpsykongroo.infra.spring.service.RedisService;
+import com.elpsykongroo.auth.service.MessageService;
+import com.elpsykongroo.auth.service.RedisService;
 import com.elpsykongroo.base.utils.BytesUtils;
 import com.elpsykongroo.base.utils.JsonUtils;
 import com.elpsykongroo.base.utils.PkceUtils;
@@ -49,7 +49,6 @@ import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
 import com.yubico.webauthn.data.ClientRegistrationExtensionOutputs;
 import com.yubico.webauthn.data.PublicKeyCredential;
 import com.yubico.webauthn.data.PublicKeyCredentialCreationOptions;
-import com.yubico.webauthn.data.ResidentKeyRequirement;
 import com.yubico.webauthn.data.UserIdentity;
 import com.yubico.webauthn.exception.AssertionFailedException;
 import com.yubico.webauthn.exception.RegistrationFailedException;
@@ -61,6 +60,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.DeferredSecurityContext;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -147,11 +147,12 @@ public class LoginServiceImpl implements LoginService {
 //            }
 //        } else {
 //            SecurityContext context = securityContextHolderStrategy.createEmptyContext();
+//            List<Authority> authorities = authorityService.userAuthority(userService.loadUserByUsername("admin").getId());
 //            Authentication authentication =
 //                    WebAuthnAuthenticationToken.authenticated(
 //                            username,
 //                            null,
-//                            null);
+//                            authorities);
 //            context.setAuthentication(authentication);
 //            securityContextHolderStrategy.setContext(context);
 //            securityContextRepository.saveContext(context, servletRequest, response);

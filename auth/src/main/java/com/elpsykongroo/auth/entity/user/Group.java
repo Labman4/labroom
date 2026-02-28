@@ -29,8 +29,6 @@ import jakarta.persistence.Table;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.LazyCollection;
-import org.hibernate.annotations.LazyCollectionOption;
 
 import java.io.Serializable;
 import java.util.List;
@@ -49,8 +47,7 @@ public class Group implements Serializable {
     @Column(name = "group_name")
     private String groupName;
 
-    @ManyToMany
-    @LazyCollection(LazyCollectionOption.FALSE)
+    @ManyToMany()
     @JsonIgnore
     @JoinTable(
             name = "user_group",
@@ -60,7 +57,6 @@ public class Group implements Serializable {
     private List<User> users;
 
     @ManyToMany
-    @LazyCollection(LazyCollectionOption.FALSE)
     @JsonIgnore
     @JoinTable(
             name = "group_authority",

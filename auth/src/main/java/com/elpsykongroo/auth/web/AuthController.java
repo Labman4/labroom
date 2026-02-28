@@ -16,17 +16,15 @@
 
 package com.elpsykongroo.auth.web;
 
+import com.elpsykongroo.auth.service.RedisService;
 import com.elpsykongroo.auth.service.custom.EmailService;
 import com.elpsykongroo.auth.service.custom.LoginService;
 
 import com.elpsykongroo.base.common.CommonResponse;
-import com.elpsykongroo.infra.spring.service.GatewayService;
-import com.elpsykongroo.infra.spring.service.RedisService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,7 +34,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.ModelAndView;
 
 @Slf4j
-@CrossOrigin(originPatterns = "*", allowCredentials = "true", exposedHeaders = {"X-CSRF-TOKEN"})
 @RestController
 public class AuthController {
     @Autowired
@@ -44,9 +41,6 @@ public class AuthController {
 
     @Autowired
     private RedisService redisService;
-
-    @Autowired
-    private GatewayService gatewayService;
 
     @Autowired
     private EmailService emailService;

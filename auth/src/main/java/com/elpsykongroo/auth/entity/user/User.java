@@ -34,8 +34,6 @@ import jakarta.persistence.Table;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.LazyCollection;
-import org.hibernate.annotations.LazyCollectionOption;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.Instant;
@@ -59,7 +57,6 @@ public class User implements UserDetails {
     private String email;
     private String nickName;
     @ManyToMany
-    @LazyCollection(LazyCollectionOption.FALSE)
     @JsonIgnore
     @JoinTable(
             name = "user_group",
@@ -70,7 +67,6 @@ public class User implements UserDetails {
     private List<Group> groups;
 
     @ManyToMany(cascade = CascadeType.ALL)
-    @LazyCollection(LazyCollectionOption.FALSE)
     @JsonIgnore
     @JoinTable(
             name = "user_authority",

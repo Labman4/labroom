@@ -56,10 +56,6 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private AuthorityService authorityService;
 
-    @Autowired
-    private GroupService groupService;
-
-
     @Override
     public User loadUserByUsername(String username) throws UsernameNotFoundException {
         return userRepository.findByUsername(username);
@@ -161,15 +157,8 @@ public class UserServiceImpl implements UserService {
         if (user == null) {
             return new ArrayList<>();
         }
-        List<Authority> authorities = new ArrayList<>();
         List<Authority> authorityList = authorityService.userAuthority(user.getId());
-        authorities.addAll(authorityList);
-        List<Group> groups = groupService.userGroup(user.getId());
-        for (Group group : groups) {
-            List<Authority> groupAuthority = authorityService.findByGroup(group.getId());
-            authorities.addAll(groupAuthority);
-        }
-        return authorities.stream().distinct().collect(Collectors.toList());
+        return authorityList.stream().distinct().collect(Collectors.toList());
     }
 
     @Override

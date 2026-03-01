@@ -70,7 +70,8 @@ public class AuthorityServiceImpl implements AuthorityService {
         List<Group> groups = groupService.userGroup(id);
         List<Authority> authorities = authorityRepository.findByUsers_Id(id);
         for (Group group : groups) {
-            authorities.addAll(group.getAuthorities());
+            List<Authority> auths = authorityRepository.findByGroups_GroupName(group.getGroupName());
+            authorities.addAll(auths);
         }
         return authorities.stream().distinct().collect(Collectors.toList());
     }

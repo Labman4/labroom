@@ -37,6 +37,8 @@ import org.springframework.lang.Nullable;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
+import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
+import org.springframework.security.crypto.keygen.StringKeyGenerator;
 import org.springframework.security.oauth2.client.JdbcOAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientProvider;
@@ -50,25 +52,22 @@ import org.springframework.security.oauth2.core.OAuth2RefreshToken;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
-import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.token.DelegatingOAuth2TokenGenerator;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.JwtGenerator;
+import org.springframework.security.oauth2.server.authorization.token.OAuth2AccessTokenGenerator;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2RefreshTokenGenerator;
+import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenClaimsContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
-import org.springframework.security.web.util.matcher.RequestMatcher;
-
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Base64;
-
-import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration(proxyBeanMethods = false)
 public class AuthorizationServerConfig {
@@ -80,6 +79,9 @@ public class AuthorizationServerConfig {
 
 	@Autowired
 	OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer;
+
+	@Autowired
+	OAuth2TokenCustomizer<OAuth2TokenClaimsContext> accessTokenCustomizer;
 
 	@Bean
 	@Order(Ordered.HIGHEST_PRECEDENCE)
@@ -102,7 +104,6 @@ public class AuthorizationServerConfig {
 									.ignoringRequestMatchers(authorizationServer.getEndpointsMatcher()));
 
 					authorizationServer.oidc(Customizer.withDefaults())
-
 							.clientAuthentication(clientAuthentication -> clientAuthentication
 								.authenticationConverter(new PublicRevokeAuthenticationConverter(registeredClientRepository))
 								.authenticationProvider(new WebAuthnAuthenticationProvider()))
@@ -163,16 +164,23 @@ public class AuthorizationServerConfig {
 	public HttpSessionEventPublisher httpSessionEventPublisher() {
 		return new HttpSessionEventPublisher();
 	}
+
 	@Bean
-	OAuth2TokenGenerator<?> tokenGenerator() {
+	public OAuth2TokenGenerator<?> tokenGenerator() {
 		JwtGenerator jwtGenerator = new JwtGenerator(new NimbusJwtEncoder(jwkSource()));
-        jwtGenerator.setJwtCustomizer(jwtCustomizer);
-		OAuth2TokenGenerator<OAuth2RefreshToken> refreshTokenGenerator = new CustomRefreshTokenGenerator();
-		return new DelegatingOAuth2TokenGenerator(jwtGenerator, refreshTokenGenerator);
+		jwtGenerator.setJwtCustomizer(jwtCustomizer);
+		OAuth2AccessTokenGenerator accessTokenGenerator = new OAuth2AccessTokenGenerator();
+		accessTokenGenerator.setAccessTokenCustomizer(accessTokenCustomizer);
+		OAuth2RefreshTokenGenerator refreshTokenGenerator = new OAuth2RefreshTokenGenerator();
+		OAuth2TokenGenerator<OAuth2RefreshToken> customRefreshTokenGenerator = new CustomRefreshTokenGenerator();
+
+		return new DelegatingOAuth2TokenGenerator(
+				accessTokenGenerator, jwtGenerator, refreshTokenGenerator, customRefreshTokenGenerator);
 	}
 
 	private static final class CustomRefreshTokenGenerator implements OAuth2TokenGenerator<OAuth2RefreshToken> {
-		private final OAuth2RefreshTokenGenerator delegate = new OAuth2RefreshTokenGenerator();
+		private final StringKeyGenerator refreshTokenGenerator = new Base64StringKeyGenerator(Base64.getUrlEncoder().withoutPadding(), 96);
+		private Clock clock = Clock.systemUTC();
 
 		@Nullable
 		@Override
@@ -181,8 +189,9 @@ public class AuthorizationServerConfig {
 					!context.getAuthorizedScopes().contains("offline_access")) {
 				return null;
 			}
-			return this.delegate.generate(context);
+			Instant issuedAt = this.clock.instant();
+			Instant expiresAt = issuedAt.plus(context.getRegisteredClient().getTokenSettings().getRefreshTokenTimeToLive());
+			return new OAuth2RefreshToken(this.refreshTokenGenerator.generateKey(), issuedAt, expiresAt);
 		}
-
 	}
 }

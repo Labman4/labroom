@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.elpsykongroo.auth.security;
+package com.elpsykongroo.auth.security.Customizer;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -47,7 +47,6 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Component

@@ -227,7 +227,9 @@ public final class FederatedIdentityIdTokenCustomizer implements OAuth2TokenCust
 				}
 			}
 			Map<String, Object> thirdPartyClaims = extractClaims(tokenContext.getPrincipal());
-
+			if (log.isDebugEnabled()) {
+				log.debug("exist claim:{}", thirdPartyClaims.keySet());
+			}
 			tokenContext.getClaims().claims(existingClaims -> {
 				// Remove conflicting claims set by this authorization server
 				existingClaims.keySet().forEach(thirdPartyClaims::remove);

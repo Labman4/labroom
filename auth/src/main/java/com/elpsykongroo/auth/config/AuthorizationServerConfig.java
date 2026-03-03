@@ -20,9 +20,6 @@ import com.elpsykongroo.auth.security.convert.PublicClientRefreshTokenAuthentica
 import com.elpsykongroo.auth.security.convert.PublicRevokeAuthenticationConverter;
 import com.elpsykongroo.auth.security.provider.PublicClientRefreshTokenAuthenticationProvider;
 import com.elpsykongroo.auth.security.provider.WebAuthnAuthenticationProvider;
-import com.elpsykongroo.auth.utils.jose.Jwks;
-import com.nimbusds.jose.jwk.JWKSet;
-import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 
@@ -83,6 +80,9 @@ public class AuthorizationServerConfig {
 	@Autowired
 	OAuth2TokenCustomizer<OAuth2TokenClaimsContext> accessTokenCustomizer;
 
+	@Autowired
+	public JWKSource<SecurityContext> jwkSource;
+
 	@Bean
 	@Order(Ordered.HIGHEST_PRECEDENCE)
 	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
@@ -114,13 +114,6 @@ public class AuthorizationServerConfig {
 								.authenticationProvider(new PublicClientRefreshTokenAuthenticationProvider(registeredClientRepository)));
 				});
 		return http.build();
-	}
-
-	@Bean
-	public JWKSource<SecurityContext> jwkSource() {
-		RSAKey rsaKey = Jwks.generateRsa();
-		JWKSet jwkSet = new JWKSet(rsaKey);
-		return (jwkSelector, securityContext) -> jwkSelector.select(jwkSet);
 	}
 
 	@Bean
@@ -167,7 +160,7 @@ public class AuthorizationServerConfig {
 
 	@Bean
 	public OAuth2TokenGenerator<?> tokenGenerator() {
-		JwtGenerator jwtGenerator = new JwtGenerator(new NimbusJwtEncoder(jwkSource()));
+		JwtGenerator jwtGenerator = new JwtGenerator(new NimbusJwtEncoder(jwkSource));
 		jwtGenerator.setJwtCustomizer(jwtCustomizer);
 		OAuth2AccessTokenGenerator accessTokenGenerator = new OAuth2AccessTokenGenerator();
 		accessTokenGenerator.setAccessTokenCustomizer(accessTokenCustomizer);

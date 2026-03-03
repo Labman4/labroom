@@ -165,18 +165,16 @@ public class AuthorizationServerConfig {
 		return new HttpSessionEventPublisher();
 	}
 
-//	@Bean
-//	public OAuth2TokenGenerator<?> tokenGenerator() {
-//		JwtGenerator jwtGenerator = new JwtGenerator(new NimbusJwtEncoder(jwkSource()));
-//		jwtGenerator.setJwtCustomizer(jwtCustomizer);
-//		OAuth2AccessTokenGenerator accessTokenGenerator = new OAuth2AccessTokenGenerator();
-//		accessTokenGenerator.setAccessTokenCustomizer(accessTokenCustomizer);
-//		OAuth2RefreshTokenGenerator refreshTokenGenerator = new OAuth2RefreshTokenGenerator();
-//		OAuth2TokenGenerator<OAuth2RefreshToken> customRefreshTokenGenerator = new CustomRefreshTokenGenerator();
-//
-//		return new DelegatingOAuth2TokenGenerator(
-//				accessTokenGenerator, jwtGenerator, refreshTokenGenerator, customRefreshTokenGenerator);
-//	}
+	@Bean
+	public OAuth2TokenGenerator<?> tokenGenerator() {
+		JwtGenerator jwtGenerator = new JwtGenerator(new NimbusJwtEncoder(jwkSource()));
+		jwtGenerator.setJwtCustomizer(jwtCustomizer);
+		OAuth2AccessTokenGenerator accessTokenGenerator = new OAuth2AccessTokenGenerator();
+		accessTokenGenerator.setAccessTokenCustomizer(accessTokenCustomizer);
+		OAuth2RefreshTokenGenerator refreshTokenGenerator = new OAuth2RefreshTokenGenerator();
+		OAuth2TokenGenerator<OAuth2RefreshToken> customRefreshTokenGenerator = new CustomRefreshTokenGenerator();
+		return new DelegatingOAuth2TokenGenerator(new OAuth2TokenGenerator[]{jwtGenerator, accessTokenGenerator, refreshTokenGenerator, customRefreshTokenGenerator});
+	}
 
 	private static final class CustomRefreshTokenGenerator implements OAuth2TokenGenerator<OAuth2RefreshToken> {
 		private final StringKeyGenerator refreshTokenGenerator = new Base64StringKeyGenerator(Base64.getUrlEncoder().withoutPadding(), 96);

@@ -77,12 +77,13 @@ public class DefaultSecurityConfig {
 						cache -> cache.requestCache(requestCache)
 				)
 				.csrf(csrf->csrf
-						.csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
+						.csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
+						.ignoringRequestMatchers("/authenticator/add"))
 				.addFilterAfter(new CsrfSessionFilter(new HttpSessionCsrfTokenRepository()), BasicAuthenticationFilter.class)
 				.authorizeHttpRequests((authorize) -> authorize
 						.requestMatchers(HttpMethod.GET,"/email/verify/**").permitAll()
 						.requestMatchers(
-								"/login",
+								"/login/**",
 								"/welcome",
 								"/register",
 								"/finishAuth").permitAll()
@@ -104,7 +105,7 @@ public class DefaultSecurityConfig {
 	@Bean
 	@Order(900)
 	public SecurityFilterChain authFilterChain(HttpSecurity http) throws Exception {
-		http.securityMatcher("/auth/**")
+		http.securityMatcher("/auth/**", "/authenticator/add")
 				.cors(withDefaults())
 				.sessionManagement(sm ->
 						sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
@@ -115,7 +116,8 @@ public class DefaultSecurityConfig {
 				.requestMatchers("/auth/user/authority/**").permitAll()
 				.requestMatchers("/auth/user/list").hasAuthority("admin")
 				.requestMatchers("/auth/user/**").authenticated()
-				.requestMatchers("/auth/**").hasAuthority("admin"));
+				.requestMatchers("/auth/**").hasAuthority("admin")
+				.requestMatchers("/authenticator/add").authenticated());
 
 		return http.build();
 	}

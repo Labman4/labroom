@@ -46,10 +46,10 @@ import org.springframework.util.CollectionUtils;
 @Component
 public final class DefaultOAuth2TokenCustomizers implements OAuth2TokenCustomizer<OAuth2TokenContext>{
 
-    @Bean
-    OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer() {
-        return (context) -> context.getClaims().claims((claims) -> customize(context));
-    }
+//    @Bean
+//    OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer() {
+//        return (context) -> context.getClaims().claims((claims) -> customize(context));
+//    }
 
     @Bean
     OAuth2TokenCustomizer<OAuth2TokenClaimsContext> accessTokenCustomizer() {
@@ -57,9 +57,6 @@ public final class DefaultOAuth2TokenCustomizers implements OAuth2TokenCustomize
     }
 
     public void customize(OAuth2TokenContext tokenContext) {
-        if (tokenContext instanceof JwtEncodingContext) {
-
-        }
         Map<String, Object> cnfClaims = null;
 
         // Add 'cnf' claim for Mutual-TLS Client Certificate-Bound Access Tokens

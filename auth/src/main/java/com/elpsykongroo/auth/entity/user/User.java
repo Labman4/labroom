@@ -46,8 +46,8 @@ import java.util.Map;
 @NoArgsConstructor
 public class User implements UserDetails {
     @Id
+    @GeneratedValue(generator = "uuid2")
     @GenericGenerator(name = "uuid2", strategy = "uuid2")
-    @GeneratedValue(strategy = GenerationType.IDENTITY, generator = "uuid2")
     private String id;
     @Column(length = 2000)
     private Map<String, Object> userInfo;

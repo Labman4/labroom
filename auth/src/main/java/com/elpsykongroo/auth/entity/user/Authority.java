@@ -41,8 +41,8 @@ import java.util.List;
 public class Authority implements GrantedAuthority {
 
     @Id
+    @GeneratedValue(generator = "uuid2")
     @GenericGenerator(name = "uuid2", strategy = "uuid2")
-    @GeneratedValue(strategy = GenerationType.IDENTITY, generator = "uuid2")
     private String id;
 
     @ManyToMany

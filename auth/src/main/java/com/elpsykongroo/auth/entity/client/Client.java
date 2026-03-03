@@ -33,8 +33,8 @@ import java.time.Instant;
 @Table(name = "`client`")
 public class Client {
 	@Id
+	@GeneratedValue(generator = "uuid2")
 	@GenericGenerator(name = "uuid2", strategy = "uuid2")
-	@GeneratedValue(strategy = GenerationType.IDENTITY, generator = "uuid2")
 	private String id;
 
 	private String clientId;

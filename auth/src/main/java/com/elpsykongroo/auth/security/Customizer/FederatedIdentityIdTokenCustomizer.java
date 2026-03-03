@@ -200,7 +200,11 @@ public final class FederatedIdentityIdTokenCustomizer implements OAuth2TokenCust
 						}
 						if ("group".equals(authority.getAuthority())) {
 							List<Group> groups = groupService.userGroup(userId);
-							info.put("group", groups);
+							List<String> groupList = new ArrayList<>();
+							for (Group group: groups) {
+								groupList.add(group.getGroupName());
+							}
+							info.put("group", groupList);
 						}
 					}
 					if (!authList.isEmpty()) {

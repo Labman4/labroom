@@ -40,10 +40,10 @@ import java.util.Optional;
 @Table(name = "authenticator")
 @NoArgsConstructor
 public class Authenticator implements Serializable {
-    
+
     @Id
+    @GeneratedValue(generator = "uuid2")
     @GenericGenerator(name = "uuid2", strategy = "uuid2")
-    @GeneratedValue(strategy = GenerationType.IDENTITY, generator = "uuid2")
     private String id;
 
     private String name;

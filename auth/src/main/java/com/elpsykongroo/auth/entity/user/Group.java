@@ -40,8 +40,9 @@ import java.util.List;
 @NoArgsConstructor
 public class Group implements Serializable {
     @Id
+    @GeneratedValue(generator = "uuid2")
     @GenericGenerator(name = "uuid2", strategy = "uuid2")
-    @GeneratedValue(strategy = GenerationType.IDENTITY, generator = "uuid2")
+    @Column(updatable = false, nullable = false)
     private String id;
 
     @Column(name = "group_name")

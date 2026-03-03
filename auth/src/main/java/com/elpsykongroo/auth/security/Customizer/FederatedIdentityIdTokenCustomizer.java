@@ -174,7 +174,8 @@ public final class FederatedIdentityIdTokenCustomizer implements OAuth2TokenCust
 		}
 		if (OidcParameterNames.ID_TOKEN.equals(tokenContext.getTokenType().getValue())) {
 			User user = userService.loadUserByUsername(tokenContext.getPrincipal().getName());
-			List<Authority> authorityList = authorityService.userAuthority(user.getId());
+			String userId = user.getId();
+			List<Authority> authorityList = authorityService.userAuthority(userId);
 			Map<String, Object> customClaims = new HashMap<>();
 			Map<String, Object> info = user.getUserInfo();
 			OidcUserInfo userInfo;
@@ -198,7 +199,7 @@ public final class FederatedIdentityIdTokenCustomizer implements OAuth2TokenCust
 							authList.add(auth[1]);
 						}
 						if ("group".equals(authority.getAuthority())) {
-							List<Group> groups = groupService.userGroup(user.getId());
+							List<Group> groups = groupService.userGroup(userId);
 							info.put("group", groups);
 						}
 					}

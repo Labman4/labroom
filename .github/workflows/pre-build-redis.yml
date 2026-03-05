@@ -18,7 +18,7 @@ jobs:
     with:
       module: redis
       version: 0.0.1
-      native: true
+      native: false
       secretPath: kv/app/native/redis
       
       

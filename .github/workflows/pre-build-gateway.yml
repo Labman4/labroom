@@ -17,8 +17,8 @@ jobs:
     secrets: inherit
     with: 
       module: gateway
-      version: 0.0.2
-      native: true
+      version: 1.0.0
+      native: false
       secretPath: kv/app/native/gateway
       
  

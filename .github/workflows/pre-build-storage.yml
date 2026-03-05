@@ -18,7 +18,7 @@ jobs:
     with:
       module: storage
       version: 1.0.0
-      native: true
+      native: false
       secretPath: kv/app/native/storage
       
       

@@ -201,21 +201,23 @@ public class SearchServiceImpl implements SearchService {
                 } else {
                     NativeQueryBuilder nativeQueryBuilder = getQuery(queryParam);
                     SearchHits<?> searchHits;
-                    NativeQueryBuilder searchAfterBuilder = nativeQueryBuilder
-                            .withPageable(PageRequest.of(0, 100))
-                            .withSort(Sort.by(
-                                    Sort.Order.asc("timestamp"),
-                                    Sort.Order.asc("_id")
-                            ));
+                    NativeQueryBuilder searchAfterBuilder = null;
                     if (StringUtils.isNotBlank(queryParam.getOrder())) {
                         if ("desc".equals(queryParam.getOrder())) {
                             searchAfterBuilder = nativeQueryBuilder.
                                     withPageable(PageRequest.of(0,100))
                                     .withSort(Sort.by(
-                                            Sort.Order.desc("timestamp"), // 换成你自己的字段
+                                            Sort.Order.desc("timestamp"),
                                             Sort.Order.desc("_id")
                                     ));
                         }
+                    } else {
+                        searchAfterBuilder = nativeQueryBuilder
+                                .withPageable(PageRequest.of(0, 100))
+                                .withSort(Sort.by(
+                                        Sort.Order.asc("timestamp"),
+                                        Sort.Order.asc("_id")
+                                ));
                     }
                     if(StringUtils.isNotBlank(queryParam.getTimestamp())
                             && StringUtils.isNotBlank(queryParam.getId())) {

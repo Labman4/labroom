@@ -202,15 +202,13 @@ public class SearchServiceImpl implements SearchService {
                     NativeQueryBuilder nativeQueryBuilder = getQuery(queryParam);
                     SearchHits<?> searchHits;
                     NativeQueryBuilder searchAfterBuilder = null;
-                    if (StringUtils.isNotBlank(queryParam.getOrder())) {
-                        if ("desc".equals(queryParam.getOrder())) {
-                            searchAfterBuilder = nativeQueryBuilder.
-                                    withPageable(PageRequest.of(0,100))
-                                    .withSort(Sort.by(
-                                            Sort.Order.desc("timestamp"),
-                                            Sort.Order.desc("_id")
-                                    ));
-                        }
+                    if (StringUtils.isNotBlank(queryParam.getOrder()) && "desc".equals(queryParam.getOrder())) {
+                        searchAfterBuilder = nativeQueryBuilder.
+                                withPageable(PageRequest.of(0,100))
+                                .withSort(Sort.by(
+                                        Sort.Order.desc("timestamp"),
+                                        Sort.Order.desc("_id")
+                                ));
                     } else {
                         searchAfterBuilder = nativeQueryBuilder
                                 .withPageable(PageRequest.of(0, 100))

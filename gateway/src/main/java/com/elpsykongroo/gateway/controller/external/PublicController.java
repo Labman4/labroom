@@ -17,9 +17,9 @@
 package com.elpsykongroo.gateway.controller.external;
 
 import com.elpsykongroo.base.common.CommonResponse;
-import com.elpsykongroo.infra.spring.config.ServiceConfig;
-import com.elpsykongroo.infra.spring.service.MessageService;
-import com.elpsykongroo.infra.spring.service.RedisService;
+import com.elpsykongroo.gateway.config.ServiceConfig;
+import com.elpsykongroo.gateway.service.MessageService;
+import com.elpsykongroo.gateway.service.RedisService;
 import com.elpsykongroo.base.utils.PkceUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

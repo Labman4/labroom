@@ -14,14 +14,24 @@
  * limitations under the License.
  */
 
-package com.elpsykongroo.gateway;
+package com.elpsykongroo.gateway.service;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import com.elpsykongroo.base.domain.message.Message;
+import feign.Headers;
+import feign.Param;
+import feign.RequestLine;
 
-@SpringBootApplication(proxyBeanMethods = false, scanBasePackages = {"com.elpsykongroo.base", "com.elpsykongroo.gateway"})
-public class GatewayApplication {
-	public static void main(String[] args) {
-		SpringApplication.run(GatewayApplication.class, args);
-	}
+public interface MessageService {
+
+    @RequestLine("GET /message/publicKey")
+    String getPublicKey();
+
+    @RequestLine("GET /message?text={text}")
+    String getMessage(@Param String text);
+
+    @RequestLine("PUT /message")
+    @Headers({
+            "Content-Type: application/json"
+    })
+    String setMessage(Message message);
 }

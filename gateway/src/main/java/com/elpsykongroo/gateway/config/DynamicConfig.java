@@ -14,14 +14,19 @@
  * limitations under the License.
  */
 
-package com.elpsykongroo.gateway;
+package com.elpsykongroo.gateway.config;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.Data;
 
-@SpringBootApplication(proxyBeanMethods = false, scanBasePackages = {"com.elpsykongroo.base", "com.elpsykongroo.gateway"})
-public class GatewayApplication {
-	public static void main(String[] args) {
-		SpringApplication.run(GatewayApplication.class, args);
-	}
+@Data
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class DynamicConfig {
+
+    private String whiteDomain;
+
+    private String recordExcludeIp;
+
+    private String recordExcludePath;
+
 }

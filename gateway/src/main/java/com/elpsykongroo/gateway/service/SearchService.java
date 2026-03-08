@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-package com.elpsykongroo.gateway;
+package com.elpsykongroo.gateway.service;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import com.elpsykongroo.base.domain.search.QueryParam;
+import feign.Headers;
+import feign.RequestLine;
+import org.springframework.stereotype.Service;
 
-@SpringBootApplication(proxyBeanMethods = false, scanBasePackages = {"com.elpsykongroo.base", "com.elpsykongroo.gateway"})
-public class GatewayApplication {
-	public static void main(String[] args) {
-		SpringApplication.run(GatewayApplication.class, args);
-	}
+public interface SearchService {
+    @RequestLine("POST /search")
+    @Headers({
+            "Content-Type: application/json"
+    })
+    String query(QueryParam queryParam);
 }

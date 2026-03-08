@@ -25,9 +25,7 @@ import java.util.List;
 import com.elpsykongroo.base.domain.search.QueryParam;
 import com.elpsykongroo.base.utils.IPUtils;
 import com.elpsykongroo.base.domain.search.repo.AccessRecord;
-import com.elpsykongroo.infra.spring.service.SearchService;
-import com.elpsykongroo.base.utils.JsonUtils;
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.elpsykongroo.gateway.service.SearchService;
 
 import com.elpsykongroo.gateway.service.AccessRecordService;
 import lombok.extern.slf4j.Slf4j;
@@ -76,52 +74,30 @@ public class AccessRecordServiceImpl implements AccessRecordService {
 		if (params.isEmpty()) {
 			return "0";
 		}
-		List<String> ids = new ArrayList<>();
 		QueryParam deleteParam = new QueryParam();
 		deleteParam.setOperation("deleteQuery");
 		deleteParam.setIndex("access_record");
 		for (String param : params) {
 			if (IPUtils.validateHost(param) || IPUtils.validate(param)) {
 				InetAddress[] inetAddresses = InetAddress.getAllByName(param);
-				QueryParam queryParam = new QueryParam();
-				queryParam.setIndex("access_record");
-				queryParam.setType(AccessRecord.class);
-				queryParam.setFields(Collections.singletonList("sourceIP"));
-				queryParam.setBoolQuery(true);
+				deleteParam.setType(AccessRecord.class);
+				deleteParam.setFields(Collections.singletonList("sourceIP"));
+				deleteParam.setBoolQuery(true);
 				if (param.contains("::") && IPUtils.isIpv6(param)) {
-					queryParam.setQueryStringParam(Collections.singletonList("\"" + param + "\""));
-					addResult(ids, queryParam);
+					deleteParam.setQueryStringParam(Collections.singletonList("\"" + param + "\""));
 				} else {
 					for (InetAddress addr : inetAddresses) {
 						if (IPUtils.isIpv6(addr.getHostAddress())) {
-							queryParam.setQueryStringParam(Collections.singletonList("\"" + addr.getHostAddress() + "\""));
+							deleteParam.setQueryStringParam(Collections.singletonList("\"" + addr.getHostAddress() + "\""));
 						} else {
-							queryParam.setQueryStringParam(Collections.singletonList(addr.getHostAddress()));
+							deleteParam.setQueryStringParam(Collections.singletonList(addr.getHostAddress()));
 						}
-						addResult(ids, queryParam);
 					}
 				}
-			} else {
-				ids.add(param);
 			}
 		}
-		deleteParam.setIds(ids);
-		deleteParam.setIdsQuery(true);
 		return searchService.query(deleteParam);
 	}
-
-	private void addResult(List<String> ids, QueryParam queryParam) {
-		String result = searchService.query(queryParam);
-		if (StringUtils.isNotEmpty(result)) {
-			List<String> idList = JsonUtils.toType(result, new TypeReference<>() {
-			});
-			if (log.isDebugEnabled()) {
-				log.debug("delete query string result: {}", idList.size());
-			}
-			ids.addAll(idList);
-		}
-	}
-
 
 	@Override
 	public String filterByParams(String params, String timestamp, String id, String order, String scrollId){

@@ -28,17 +28,17 @@ import java.util.stream.Collectors;
 import com.elpsykongroo.base.domain.search.repo.IpManage;
 import com.elpsykongroo.base.domain.search.QueryParam;
 import com.elpsykongroo.base.utils.JsonUtils;
-import com.elpsykongroo.infra.spring.optional.manager.DynamicConfigManager;
+import com.elpsykongroo.gateway.manager.DynamicConfigManager;
 import com.elpsykongroo.base.utils.IPUtils;
-import com.elpsykongroo.infra.spring.service.RedisService;
-import com.elpsykongroo.infra.spring.service.SearchService;
+import com.elpsykongroo.gateway.service.RedisService;
+import com.elpsykongroo.gateway.service.SearchService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.FeignException;
 import jakarta.servlet.http.HttpServletRequest;
 
-import com.elpsykongroo.infra.spring.config.RequestConfig;
+import com.elpsykongroo.gateway.config.RequestConfig;
 import com.elpsykongroo.gateway.service.IPManagerService;
 
 import lombok.extern.slf4j.Slf4j;

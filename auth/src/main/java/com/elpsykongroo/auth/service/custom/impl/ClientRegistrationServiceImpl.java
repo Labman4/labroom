@@ -27,6 +27,7 @@ import java.util.List;
 
 @Service
 public class ClientRegistrationServiceImpl implements ClientRegistrationService {
+
     @Autowired
     private ClientRegistryRepository clientRegistryRepository;
 
@@ -59,7 +60,7 @@ public class ClientRegistrationServiceImpl implements ClientRegistrationService 
     }
     @Override
     @Transactional
-    public String delete(String registrationId) {
+    public int delete(String registrationId) {
         return clientRegistryRepository.deleteByRegistrationId(registrationId);
     }
 

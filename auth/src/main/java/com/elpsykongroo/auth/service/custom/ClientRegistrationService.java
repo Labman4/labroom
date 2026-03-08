@@ -26,7 +26,7 @@ public interface ClientRegistrationService {
 
     String add(ClientRegistry client);
 
-    String delete(String registryId);
+    int delete(String registryId);
 
     List<ClientRegistry> findAll();
 

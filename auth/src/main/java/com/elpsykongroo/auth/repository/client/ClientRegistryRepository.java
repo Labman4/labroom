@@ -40,7 +40,7 @@ public interface ClientRegistryRepository extends CrudRepository<ClientRegistry,
                                ClientRegistry.ProviderDetails providerDetails, String clientName,
                                @NonNull String registrationId);
 
-    String deleteByRegistrationId(String registrationId);
+    int deleteByRegistrationId(String registrationId);
 
     ClientRegistry findByRegistrationId(String registrationId);
 

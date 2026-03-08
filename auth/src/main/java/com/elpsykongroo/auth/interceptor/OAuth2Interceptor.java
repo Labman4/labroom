@@ -36,9 +36,7 @@ public class OAuth2Interceptor implements RequestInterceptor {
 
     @Override
     public void apply(RequestTemplate requestTemplate) {
-        if (serviceConfig.getOauth2().isEnable()) {
-            requestTemplate.header("Authorization", "Bearer " + getAccessToken(clientManager));
-        }
+        requestTemplate.header("Authorization", "Bearer " + getAccessToken(clientManager));
     }
 
     private String getAccessToken(OAuth2AuthorizedClientManager clientManager) {

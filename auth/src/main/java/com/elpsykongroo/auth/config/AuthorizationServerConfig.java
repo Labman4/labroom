@@ -29,21 +29,20 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.lang.Nullable;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
 import org.springframework.security.crypto.keygen.StringKeyGenerator;
-import org.springframework.security.oauth2.client.JdbcOAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.AuthorizedClientServiceOAuth2AuthorizedClientManager;
+import org.springframework.security.oauth2.client.InMemoryOAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientProvider;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientProviderBuilder;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.AuthenticatedPrincipalOAuth2AuthorizedClientRepository;
-import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.core.OAuth2RefreshToken;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
@@ -102,7 +101,6 @@ public class AuthorizationServerConfig {
 							.cors(Customizer.withDefaults())
 							.csrf((csrf)-> csrf
 									.ignoringRequestMatchers(authorizationServer.getEndpointsMatcher()));
-
 					authorizationServer.oidc(Customizer.withDefaults())
 							.clientAuthentication(clientAuthentication -> clientAuthentication
 								.authenticationConverter(new PublicRevokeAuthenticationConverter(registeredClientRepository))
@@ -128,9 +126,8 @@ public class AuthorizationServerConfig {
 
 	@Bean
 	public OAuth2AuthorizedClientService authorizedClientService(
-			JdbcTemplate jdbcTemplate,
 			ClientRegistrationRepository clientRegistrationRepository) {
-		return new JdbcOAuth2AuthorizedClientService(jdbcTemplate, clientRegistrationRepository);
+		return new InMemoryOAuth2AuthorizedClientService(clientRegistrationRepository);
 	}
 
 	@Bean
@@ -139,20 +136,34 @@ public class AuthorizationServerConfig {
 		return new AuthenticatedPrincipalOAuth2AuthorizedClientRepository(authorizedClientService);
 	}
 
+//	@Bean
+//	OAuth2AuthorizedClientManager authorizedClientManager(ClientRegistrationRepository clientRegistrationRepository,
+//														  OAuth2AuthorizedClientRepository authorizedClientRepository) {
+//		OAuth2AuthorizedClientProvider authorizedClientProvider = OAuth2AuthorizedClientProviderBuilder
+//				.builder()
+//				.clientCredentials()
+//				.authorizationCode()
+//				.refreshToken()
+//				.build();
+//		DefaultOAuth2AuthorizedClientManager authorizedClientManager = new DefaultOAuth2AuthorizedClientManager(clientRegistrationRepository, authorizedClientRepository);
+//		authorizedClientManager.setAuthorizedClientProvider(authorizedClientProvider);
+//		return authorizedClientManager;
+//	}
+
 	@Bean
-	OAuth2AuthorizedClientManager authorizedClientManager(ClientRegistrationRepository clientRegistrationRepository,
-														  OAuth2AuthorizedClientRepository authorizedClientRepository) {
-		OAuth2AuthorizedClientProvider authorizedClientProvider = OAuth2AuthorizedClientProviderBuilder
-				.builder()
-				.clientCredentials()
-				.authorizationCode()
-				.refreshToken()
-				.build();
-		DefaultOAuth2AuthorizedClientManager authorizedClientManager = new DefaultOAuth2AuthorizedClientManager(clientRegistrationRepository, authorizedClientRepository);
+	public OAuth2AuthorizedClientManager authorizedClientManager(ClientRegistrationRepository clientRegistrationRepository,
+																 OAuth2AuthorizedClientService authorizedClientService) {
+		OAuth2AuthorizedClientProvider authorizedClientProvider =
+				OAuth2AuthorizedClientProviderBuilder.builder()
+						.clientCredentials()
+						.authorizationCode()
+						.refreshToken()
+						.build();
+		AuthorizedClientServiceOAuth2AuthorizedClientManager authorizedClientManager = new AuthorizedClientServiceOAuth2AuthorizedClientManager(
+				clientRegistrationRepository, authorizedClientService);
 		authorizedClientManager.setAuthorizedClientProvider(authorizedClientProvider);
 		return authorizedClientManager;
 	}
-
 	@Bean
 	public HttpSessionEventPublisher httpSessionEventPublisher() {
 		return new HttpSessionEventPublisher();

@@ -48,8 +48,11 @@ public class IpPolicyFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        IpPolicy ipPolicy = ipPolicyManager.get();
         String ip = IPUtils.accessIP(request, headers);
+        if (IPUtils.isPrivate(ip)) {
+            filterChain.doFilter(request, response);
+        }
+        IpPolicy ipPolicy = ipPolicyManager.get();
         List<IpManage> black = ipPolicy.getBlack();
         if (!PathUtils.beginWithPath(nonPrivate,request.getRequestURI())) {
             List<IpManage> white = ipPolicy.getWhite();

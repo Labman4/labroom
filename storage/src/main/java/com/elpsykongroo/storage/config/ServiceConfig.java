@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package com.elpsykongroo.gateway.config;
+package com.elpsykongroo.storage.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 
 @Data
 @Component
@@ -28,17 +29,74 @@ public class ServiceConfig {
 
     private TimeOut timeout;
 
-    private String env;
-
     private Url url;
 
     private Limit limit;
+
+    //public ca
+    private SSL ssl;
+
+    private S3 s3;
 
     private OAuth2 oauth2;
 
     private Vault vault;
 
     private boolean record;
+
+    @Data
+    public static class SSL {
+        
+        private String type;
+
+        private String ca ;
+
+        private String cert;
+
+        private String key;
+    }
+
+    @Data
+    public static class Elastic {
+
+        private TimeOut timeout;
+        //self ca
+        private SSL ssl ;
+
+        private String[] nodes;
+
+        private String user;
+
+        private String pass;
+
+    }
+
+    @Data
+    public static class Redis {
+
+        private String type;
+
+        private String host;
+
+        private int port;
+
+        private String password;
+    }
+
+    @Data
+    public static class S3 {
+
+        private String accessKey;
+
+        private String accessSecret ;
+
+        private String endpoint;
+
+        private String region;
+
+        private String platform;
+
+    }
 
     @Data
     public static class TimeOut {

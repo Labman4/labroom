@@ -16,8 +16,8 @@
 
 package com.elpsykongroo.storage.service.impl;
 
-import com.elpsykongroo.infra.spring.config.ServiceConfig;
-import com.elpsykongroo.infra.spring.domain.storage.object.S3;
+import com.elpsykongroo.storage.config.ServiceConfig;
+import com.elpsykongroo.storage.domain.S3;
 import com.elpsykongroo.base.utils.JsonUtils;
 import com.elpsykongroo.storage.service.S3Service;
 import lombok.extern.slf4j.Slf4j;

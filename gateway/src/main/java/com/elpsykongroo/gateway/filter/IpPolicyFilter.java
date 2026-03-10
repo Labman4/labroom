@@ -57,9 +57,6 @@ public class IpPolicyFilter extends OncePerRequestFilter {
         if (!PathUtils.beginWithPath(nonPrivate,request.getRequestURI())) {
             List<IpManage> white = ipPolicy.getWhite();
             boolean flag = false;
-            if (IPUtils.isPrivate(request.getRemoteAddr())) {
-                flag = true;
-            }
             if(white != null && !white.isEmpty()) {
                 for (IpManage ipManage : white) {
                     if (ipManage.getAddress().equals(ip)) {

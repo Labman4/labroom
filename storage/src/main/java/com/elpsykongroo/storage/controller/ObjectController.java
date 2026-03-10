@@ -18,7 +18,7 @@ package com.elpsykongroo.storage.controller;
 
 import com.elpsykongroo.base.common.CommonResponse;
 import com.elpsykongroo.base.domain.message.Message;
-import com.elpsykongroo.infra.spring.domain.storage.object.S3;
+import com.elpsykongroo.storage.domain.S3;
 import com.elpsykongroo.base.utils.MessageDigestUtils;
 import com.elpsykongroo.storage.service.ObjectService;
 import jakarta.servlet.http.HttpServletRequest;

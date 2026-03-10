@@ -14,16 +14,23 @@
  * limitations under the License.
  */
 
-package com.elpsykongroo.storage.service;
+package com.elpsykongroo.storage.domain;
 
-import com.elpsykongroo.storage.domain.S3;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.io.IOException;
+import java.time.Instant;
 
-public interface StreamService {
-    String checkSha256(S3 s3);
+@Data
+@NoArgsConstructor
+public class ListObjectResult {
+    private String key;
+    private Instant timestamp;
+    private Long size;
 
-    void uploadStream(String clientId, S3 s3, Integer num, String uploadId) throws IOException;
-
-    void autoComplete(S3 s3);
+    public ListObjectResult(String key, Instant lastModified, Long size) {
+        this.key = key;
+        this.timestamp = lastModified;
+        this.size = size;
+    }
 }

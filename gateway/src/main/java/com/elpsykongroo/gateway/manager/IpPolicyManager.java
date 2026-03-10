@@ -89,7 +89,6 @@ public class IpPolicyManager {
 
     private String updateIpList(boolean black) {
         String list = "";
-        try {
             if (black) {
                 list = redisService.get("black@" + env);
             } else {
@@ -106,11 +105,6 @@ public class IpPolicyManager {
                     }
                 }
             }
-        } catch (Exception e) {
-            if (log.isErrorEnabled()) {
-                log.error("feign error", e);
-            }
-        }
         return list;
     }
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.elpsykongroo.gateway.config;
+package com.elpsykongroo.storage.config;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +41,9 @@ public class SecurityConfig {
 
 	@Autowired
 	private ServiceConfig serviceConfig;
+
+	@Autowired
+	private RequestConfig requestConfig;
 
 	@Bean
 	AuthenticationManagerResolver<HttpServletRequest> tokenAuthenticationManagerResolver
@@ -84,7 +87,7 @@ public class SecurityConfig {
 								opaqueTokenIntrospector())))
 				.authorizeHttpRequests((authorize) -> authorize
 						.requestMatchers(HttpMethod.GET, "/actuator/**").permitAll()
-						.requestMatchers(HttpMethod.GET,"/public/**").permitAll()
+						.requestMatchers(requestConfig.getPath().getPermit()).permitAll()
 						.anyRequest().authenticated());
 		return http.build();
 	}

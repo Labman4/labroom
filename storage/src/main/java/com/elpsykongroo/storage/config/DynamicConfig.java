@@ -14,16 +14,19 @@
  * limitations under the License.
  */
 
-package com.elpsykongroo.storage.service;
+package com.elpsykongroo.storage.config;
 
-import com.elpsykongroo.storage.domain.S3;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.Data;
 
-import java.io.IOException;
+@Data
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class DynamicConfig {
 
-public interface StreamService {
-    String checkSha256(S3 s3);
+    private String whiteDomain;
 
-    void uploadStream(String clientId, S3 s3, Integer num, String uploadId) throws IOException;
+    private String recordExcludeIp;
 
-    void autoComplete(S3 s3);
+    private String recordExcludePath;
+
 }

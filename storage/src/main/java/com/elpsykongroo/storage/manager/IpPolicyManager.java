@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.elpsykongroo.auth.manager;
+package com.elpsykongroo.storage.manager;
 
-import com.elpsykongroo.base.domain.IpPolicy;
 import com.elpsykongroo.base.domain.search.repo.IpManage;
 import com.elpsykongroo.base.utils.JsonUtils;
-import com.elpsykongroo.auth.service.GatewayService;
-import com.elpsykongroo.auth.service.RedisService;
+import com.elpsykongroo.base.domain.IpPolicy;
+import com.elpsykongroo.storage.service.GatewayService;
+import com.elpsykongroo.storage.service.RedisService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

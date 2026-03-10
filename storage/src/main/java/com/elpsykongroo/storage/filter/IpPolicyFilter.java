@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.elpsykongroo.auth.filter;
+package com.elpsykongroo.storage.filter;
 
 import com.elpsykongroo.base.domain.search.repo.IpManage;
 import com.elpsykongroo.base.utils.IPUtils;
 import com.elpsykongroo.base.utils.PathUtils;
 import com.elpsykongroo.base.domain.IpPolicy;
-import com.elpsykongroo.auth.manager.IpPolicyManager;
+import com.elpsykongroo.storage.manager.IpPolicyManager;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

@@ -17,9 +17,9 @@
 package com.elpsykongroo.storage.service;
 
 import com.elpsykongroo.base.domain.message.Message;
-import com.elpsykongroo.infra.spring.domain.storage.object.CorsRule;
-import com.elpsykongroo.infra.spring.domain.storage.object.ListObjectResult;
-import com.elpsykongroo.infra.spring.domain.storage.object.S3;
+import com.elpsykongroo.storage.domain.CorsRule;
+import com.elpsykongroo.storage.domain.ListObjectResult;
+import com.elpsykongroo.storage.domain.S3;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Service;

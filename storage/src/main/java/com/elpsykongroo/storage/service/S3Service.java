@@ -16,7 +16,7 @@
 
 package com.elpsykongroo.storage.service;
 
-import com.elpsykongroo.infra.spring.domain.storage.object.S3;
+import com.elpsykongroo.storage.domain.S3;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;

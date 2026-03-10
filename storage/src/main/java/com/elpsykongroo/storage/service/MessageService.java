@@ -16,14 +16,22 @@
 
 package com.elpsykongroo.storage.service;
 
-import com.elpsykongroo.storage.domain.S3;
+import com.elpsykongroo.base.domain.message.Message;
+import feign.Headers;
+import feign.Param;
+import feign.RequestLine;
 
-import java.io.IOException;
+public interface MessageService {
 
-public interface StreamService {
-    String checkSha256(S3 s3);
+    @RequestLine("GET /message/publicKey")
+    String getPublicKey();
 
-    void uploadStream(String clientId, S3 s3, Integer num, String uploadId) throws IOException;
+    @RequestLine("GET /message?text={text}")
+    String getMessage(@Param String text);
 
-    void autoComplete(S3 s3);
+    @RequestLine("PUT /message")
+    @Headers({
+            "Content-Type: application/json"
+    })
+    String setMessage(Message message);
 }

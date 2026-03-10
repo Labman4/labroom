@@ -16,12 +16,12 @@
 
 package com.elpsykongroo.storage.service.impl;
 
-import com.elpsykongroo.infra.spring.config.ServiceConfig;
+import com.elpsykongroo.storage.config.ServiceConfig;
 import com.elpsykongroo.base.domain.message.Send;
-import com.elpsykongroo.infra.spring.domain.storage.object.S3;
-import com.elpsykongroo.infra.spring.service.GatewayService;
-import com.elpsykongroo.infra.spring.service.KafkaService;
-import com.elpsykongroo.infra.spring.service.RedisService;
+import com.elpsykongroo.storage.domain.S3;
+import com.elpsykongroo.storage.service.GatewayService;
+import com.elpsykongroo.storage.service.KafkaService;
+import com.elpsykongroo.storage.service.RedisService;
 import com.elpsykongroo.base.utils.MessageDigestUtils;
 import com.elpsykongroo.base.utils.NormalizedUtils;
 import com.elpsykongroo.storage.service.S3Service;

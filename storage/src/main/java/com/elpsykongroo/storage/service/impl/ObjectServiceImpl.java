@@ -514,14 +514,15 @@ public class ObjectServiceImpl implements ObjectService {
             if (log.isDebugEnabled()) {
                 log.debug("output error:{}", e);
             }
-        } finally {
-            if (bufferedOutputStream != null) {
-                bufferedOutputStream.flush();
-                bufferedOutputStream.close();
-            }
-            if (bufferedInputStream != null) {
-                bufferedInputStream.close();
-            }
         }
+//        finally {
+//            if (bufferedOutputStream != null) {
+//                bufferedOutputStream.flush();
+//                bufferedOutputStream.close();
+//            }
+//            if (bufferedInputStream != null) {
+//                bufferedInputStream.close();
+//            }
+//        }
     }
 }

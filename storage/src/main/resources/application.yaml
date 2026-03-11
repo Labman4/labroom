@@ -6,15 +6,25 @@ server:
   tomcat:
     connection-timeout: 12000
     keep-alive-timeout: 12000
+    max-swallow-size: 10MB
+    max-http-form-post-size: 10MB
   port: 9999
 spring:
   servlet:
     multipart:
-      max-request-size: -1
-      max-file-size: -1
+      enable: true
+#      max-request-size: 10MB
+      max-file-size: 10MB
       resolve-lazily: true
   lifecycle:
     timeout-per-shutdown-phase: 10s
+#  security:
+#    oauth2:
+#      resourceserver:
+#        opaque-token:
+#          introspection-uri: ${AUTH_URL:http://localhost:9000}/oauth2/introspect
+#          client-id: init
+#          client_secret: just for init
 service:
   vault:
     enable: ${VAULT_ENABLE:true}

@@ -41,6 +41,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
@@ -114,7 +115,7 @@ public class ObjectServiceImpl implements ObjectService {
         s3Service.abortMultipartUpload(clientMap.get(s3.getClientId()), s3.getBucket(), s3.getKey(), s3.getUploadId());
     }
     @Override
-    public void download(S3 s3, HttpServletRequest request, HttpServletResponse response) throws IOException {
+    public void download(S3 s3, HttpServletRequest request, HttpServletResponse response) {
         s3Service.initClient(s3, "");
         downloadStream(s3.getClientId(), s3.getBucket(), s3.getKey(), s3.getOffset(), s3.getSecret(), "", "", request, response);
     }
@@ -369,7 +370,7 @@ public class ObjectServiceImpl implements ObjectService {
         return completedParts;
     }
 
-    private void downloadStream(String clientId, String bucket, String key, String offset, String secret, String algorithm, String state, HttpServletRequest request, HttpServletResponse response) throws IOException {
+    private void downloadStream(String clientId, String bucket, String key, String offset, String secret, String algorithm, String state, HttpServletRequest request, HttpServletResponse response) {
         int chunkOffset = 1024 * 1024 * 5;
         if (StringUtils.isNotBlank(offset)) {
             chunkOffset = Integer.parseInt(offset);
@@ -378,30 +379,37 @@ public class ObjectServiceImpl implements ObjectService {
         int end = 0;
         String range = request.getHeader("Range");
         if (StringUtils.isNotBlank(range)) {
-            String[] ranges = range.replace("bytes=", "").split("-");
-            start = Integer.parseInt(ranges[0]);
-            if (ranges.length > 1) {
-                end = Integer.parseInt(ranges[1]);
-            }
             response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
         }
-        int startOffset = start / chunkOffset;
-        if (start != startOffset * chunkOffset) {
-            start = startOffset * chunkOffset;
-        }
+
         if (StringUtils.isBlank(algorithm)) {
             algorithm = "AES-GCM";
         }
         ResponseInputStream<GetObjectResponse> in = null;
+
         if (StringUtils.isNotBlank(secret)) {
             HeadObjectResponse headObjectResponse = s3Service.headObject(clientMap.get(clientId), bucket, key);
+            if (StringUtils.isNotBlank(range)) {
+                String[] ranges = range.replace("bytes=", "").split("-");
+                start = Integer.parseInt(ranges[0]);
+                if (ranges.length > 1) {
+                    end = Integer.parseInt(ranges[1]);
+                } else {
+                    end = headObjectResponse.contentLength().intValue() - 1;
+                }
+                response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
+            }
+            int startOffset = start / chunkOffset;
+            if (start != startOffset * chunkOffset && StringUtils.isNotBlank(secret)) {
+                start = startOffset * chunkOffset;
+            }
             int size = headObjectResponse.contentLength().intValue() / chunkOffset + 1;
             long contentLength = 0;
             if ("AES-GCM".equals(algorithm)) {
-                in = s3Service.getObjectStream(clientMap.get(clientId), bucket, key, start + ((12 + 16) * startOffset), end);
+                in = s3Service.getObjectStream(clientMap.get(clientId), bucket, key, start + ((12 + 16) * startOffset), end, "");
                 contentLength = headObjectResponse.contentLength() - (12 + 16) * size;
             } else {
-                in = s3Service.getObjectStream(clientMap.get(clientId), bucket, key, start + 16 * startOffset, end);
+                in = s3Service.getObjectStream(clientMap.get(clientId), bucket, key, start + 16 * startOffset, end, "");
                 contentLength = headObjectResponse.contentLength() - 16 * size;
             }
             if (StringUtils.isNotBlank(range)) {
@@ -414,41 +422,37 @@ public class ObjectServiceImpl implements ObjectService {
                 response.setHeader("Content-Range", contentRange);
             }
         } else {
-            in = s3Service.getObjectStream(clientMap.get(clientId), bucket, key, start, end);
+            in = s3Service.getObjectStream(clientMap.get(clientId), bucket, key, start, end, range);
         }
         if (in != null) {
-            OutputStream out = response.getOutputStream();
-            response.setHeader("Accept-Ranges", "bytes");
-            response.setHeader("Content-Disposition", "attachment; filename=" + NormalizedUtils.topicNormalize(key));
+            response.setHeader("Accept-Ranges", in.response().acceptRanges());
             response.setHeader("Content-Type", in.response().contentType());
-            /**
-             effect: content-length will be unknown
-             */
+            response.setHeader("Content-Disposition", "inline; filename=" + NormalizedUtils.topicNormalize(key));
+            response.setHeader("Content-Range",in.response().contentRange());
+            try {
+                OutputStream out = response.getOutputStream();
+                /**
+                 effect: content-length will be unknown
+                 */
 //        response.setHeader("Content-Encoding", "gzip");
             /**
              * effect: need send extra byte change, chunkSize will change dynamic by byte[] length
              */
 //        response.setHeader("Transfer-Encoding", "chunked");
 
-            try {
                 handleIn(in, out, response, secret, algorithm, state, chunkOffset);
+            } catch (IOException e) {
+                if(log.isDebugEnabled()) {
+                    log.debug("io error", e.getMessage());
+                }
             } finally {
-                if (in != null) {
-                    in.close();
-                }
-                if (out != null) {
-                    out.flush();
-                    out.close();
-                }
+                IOUtils.closeQuietly(in);
             }
         }
     }
 
     private void handleIn(ResponseInputStream<GetObjectResponse> in, OutputStream out, HttpServletResponse response, String secret, String algorithm, String state, int chunkOffset) throws IOException {
-        BufferedInputStream bufferedInputStream = new BufferedInputStream(in);
-        BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(out);
-        try {
-            if (StringUtils.isNotBlank(secret)) {
+        if (StringUtils.isNotBlank(secret)) {
 //                    int startOffset = 0;
 //                    int endOffset = 0;
 //                    String[] respRanges = null;
@@ -466,63 +470,45 @@ public class ObjectServiceImpl implements ObjectService {
 //                        respRange = "bytes= " + startOffset + "-" + endOffset + "/" + respRanges[1];
 ////                        response.setHeader("Content-Range", respRange);
 //                    }
-                String secretBase64 = messageService.getMessage(state);
-                if (StringUtils.isNotBlank(secretBase64)) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("start decrypt");
-                    }
-                    int chunkSize = 0;
-                    byte[] cipherResult = Base64.getDecoder().decode(secret);
-                    byte[] secretData = Base64.getDecoder().decode(secretBase64);
-                    byte[] secretOrigin = EncryptUtils.decryptAsByte(cipherResult, secretData);
-                    if ("AES-GCM".equals(algorithm)) {
-                        chunkSize = chunkOffset + 12 + 16;
-                    } else {
-                        chunkSize = chunkOffset + 16;
-                    }
-                    int totalBytesRead = 0;
-                    int bytesRead;
-                    int len = 0;
-                    byte[] b = new byte[chunkSize];
-                    while((bytesRead = in.read(b, len, chunkSize - len))!= -1) {
-                        if (bytesRead + len >= chunkSize) {
-                            byte[] decryptData = EncryptUtils.decryptAsByte(b, MessageDigestUtils.sha256ByteArray(secretOrigin));
-                            bufferedOutputStream.write(decryptData, 0, decryptData.length);
-                            totalBytesRead = 0;
-                            len = 0;
-                        }  else {
-                            len += bytesRead;
-                            totalBytesRead += bytesRead;
-                        }
-                    }
-                    if (bytesRead == -1) {
-                        byte[] truncatedArray = Arrays.copyOfRange(b, 0, totalBytesRead);
-                        byte[] decryptData = EncryptUtils.decryptAsByte(truncatedArray, MessageDigestUtils.sha256ByteArray(secretOrigin));
-                        bufferedOutputStream.write(decryptData, 0, decryptData.length);
+            String secretBase64 = messageService.getMessage(state);
+            if (StringUtils.isNotBlank(secretBase64)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("start decrypt");
+                }
+                int chunkSize = 0;
+                byte[] cipherResult = Base64.getDecoder().decode(secret);
+                byte[] secretData = Base64.getDecoder().decode(secretBase64);
+                byte[] secretOrigin = EncryptUtils.decryptAsByte(cipherResult, secretData);
+                if ("AES-GCM".equals(algorithm)) {
+                    chunkSize = chunkOffset + 12 + 16;
+                } else {
+                    chunkSize = chunkOffset + 16;
+                }
+                int totalBytesRead = 0;
+                int bytesRead;
+                int len = 0;
+                byte[] b = new byte[chunkSize];
+                while((bytesRead = in.read(b, len, chunkSize - len))!= -1) {
+                    if (bytesRead + len >= chunkSize) {
+                        byte[] decryptData = EncryptUtils.decryptAsByte(b, MessageDigestUtils.sha256ByteArray(secretOrigin));
+                        out.write(decryptData, 0, decryptData.length);
+                        totalBytesRead = 0;
+                        len = 0;
+                    }  else {
+                        len += bytesRead;
+                        totalBytesRead += bytesRead;
                     }
                 }
-            } else {
-                response.setHeader("ETag", in.response().eTag());
-                response.setContentLengthLong(in.response().contentLength());
-                byte[] bufferDirect = new byte[1024];
-                int len;
-                while ((len = bufferedInputStream.read(bufferDirect)) != -1) {
-                    bufferedOutputStream.write(bufferDirect, 0, len);
+                if (bytesRead == -1) {
+                    byte[] truncatedArray = Arrays.copyOfRange(b, 0, totalBytesRead);
+                    byte[] decryptData = EncryptUtils.decryptAsByte(truncatedArray, MessageDigestUtils.sha256ByteArray(secretOrigin));
+                    out.write(decryptData, 0, decryptData.length);
                 }
             }
-        } catch (Exception e) {
-            if (log.isDebugEnabled()) {
-                log.debug("output error:{}", e);
-            }
+        } else {
+            response.setHeader("ETag", in.response().eTag());
+            response.setContentLengthLong(in.response().contentLength());
+            IOUtils.copyLarge(in, out);
         }
-//        finally {
-//            if (bufferedOutputStream != null) {
-//                bufferedOutputStream.flush();
-//                bufferedOutputStream.close();
-//            }
-//            if (bufferedInputStream != null) {
-//                bufferedInputStream.close();
-//            }
-//        }
     }
 }

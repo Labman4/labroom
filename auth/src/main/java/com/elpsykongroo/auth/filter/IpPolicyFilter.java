@@ -49,34 +49,36 @@ public class IpPolicyFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String ip = IPUtils.accessIP(request, headers);
-        if (IPUtils.isPrivate(ip)) {
-            filterChain.doFilter(request, response);
-        }
         IpPolicy ipPolicy = ipPolicyManager.get();
-        List<IpManage> black = ipPolicy.getBlack();
-        if (!PathUtils.beginWithPath(nonPrivate,request.getRequestURI())) {
-            List<IpManage> white = ipPolicy.getWhite();
-            boolean flag = false;
-            if(white != null && !white.isEmpty()) {
-                for (IpManage ipManage : white) {
-                    if (ipManage.getAddress().equals(ip)) {
-                        flag = true;
-                        break;
+        if (ipPolicy != null) {
+            List<IpManage> black = ipPolicy.getBlack();
+            if (!PathUtils.beginWithPath(nonPrivate,request.getRequestURI())) {
+                List<IpManage> white = ipPolicy.getWhite();
+                boolean flag = false;
+                if (IPUtils.isPrivate(request.getRemoteAddr())) {
+                    flag = true;
+                }
+                if(white != null && !white.isEmpty()) {
+                    for (IpManage ipManage : white) {
+                        if (ipManage.getAddress().equals(ip)) {
+                            flag = true;
+                            break;
+                        }
+                    }
+                    if (!flag) {
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.setContentType("text/plain;charset=UTF-8");
+                        response.getWriter().write("your ip is not allowed");
+                        return;
                     }
                 }
-                if (!flag) {
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    response.setContentType("text/plain;charset=UTF-8");
-                    response.getWriter().write("your ip is not allowed");
-                    return;
-                }
-            }
-        } else if (black != null && !black.isEmpty()) {
-            for (IpManage ipManage : black) {
-                if (ipManage.getAddress().equals(ip)) {
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    response.setContentType("text/plain;charset=UTF-8");
-                    response.getWriter().write("your ip is blocked");
+            } else if (black != null && !black.isEmpty()) {
+                for (IpManage ipManage : black) {
+                    if (ipManage.getAddress().equals(ip)) {
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.setContentType("text/plain;charset=UTF-8");
+                        response.getWriter().write("your ip is blocked");
+                    }
                 }
             }
         }

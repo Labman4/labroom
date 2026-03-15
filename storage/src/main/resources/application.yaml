@@ -6,14 +6,15 @@ server:
   tomcat:
     connection-timeout: 12000
     keep-alive-timeout: 12000
-    max-swallow-size: 10MB
-    max-http-form-post-size: 10MB
+    max-swallow-size: 20MB
+    max-http-form-post-size: 20MB
+    max-part-count: 30
   port: 9999
 spring:
   servlet:
     multipart:
-#      max-request-size: 10MB
-      max-file-size: 10MB
+      max-request-size: 20MB
+      max-file-size: 20MB
       resolve-lazily: true
   lifecycle:
     timeout-per-shutdown-phase: 10s

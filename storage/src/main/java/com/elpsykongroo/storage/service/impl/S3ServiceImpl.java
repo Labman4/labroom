@@ -231,14 +231,16 @@ public class S3ServiceImpl implements S3Service {
     }
 
     @Override
-    public ResponseInputStream<GetObjectResponse> getObjectStream(S3Client s3Client, String bucket, String key, int start, int end) {
+    public ResponseInputStream<GetObjectResponse> getObjectStream(S3Client s3Client, String bucket, String key, int start, int end, String range) {
         try {
             GetObjectRequest objectRequest = null;
             GetObjectRequest.Builder builder = GetObjectRequest
                     .builder()
                     .bucket(bucket)
                     .key(key);
-            if (start >= 0) {
+            if (StringUtils.isNotBlank(range)) {
+                objectRequest = builder.range(range).build();
+            } else if (start >= 0) {
                 objectRequest = builder.range("bytes=" + start + "-").build();
                 if (end > start) {
                     objectRequest = builder.range("bytes=" + start + "-" + end).build();

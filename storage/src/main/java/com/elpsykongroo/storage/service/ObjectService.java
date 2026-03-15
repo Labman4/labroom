@@ -37,7 +37,7 @@ public interface ObjectService {
 
     List<ListObjectResult> list(S3 s3);
 
-    void download(S3 s3, HttpServletRequest request, HttpServletResponse response) throws IOException;
+    void download(S3 s3, HttpServletRequest request, HttpServletResponse response);
 
     void delete(S3 s3);
 
